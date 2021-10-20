@@ -1,0 +1,9 @@
+# Ignore everything
+*
+
+# Except from executable and .zok files
+!zokrates
+!*.zok
+
+!.gitignore
+!README.md

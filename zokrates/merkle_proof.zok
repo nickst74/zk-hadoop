@@ -1,0 +1,4 @@
+import "./merkle_proof_generic" as merkle_proof
+
+def main(u32 index, u32[8] rootDigest, private u32[8][16] chunk, private u32[16][8] siblings, private bool[16] pathDirection) -> bool:
+	return merkle_proof(index, rootDigest, chunk, siblings, pathDirection)
