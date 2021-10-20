@@ -66,7 +66,6 @@ contract Data {
     
     function get_input_vector(uint _block_id) internal view returns(input_str memory){
         input_str memory ret;
-        //TODO: better way to get seed to uint
         ret.tmp = peek_seed();
         bytes32 root = roots[_block_id];
         //TODO: optimize using inline assembly (mload)
@@ -92,7 +91,7 @@ contract Data {
             for(uint j = 0; j < num_chall; j++){
                 input.tmp = RNG.gen(input.tmp, _proofs.block_ids[i]);
                 input.input[0] = input.tmp % num_chunks;
-                if(!verifier.verifyTx(_proofs.a[i], [_proofs.b1[i], _proofs.b2[i]], _proofs.c[i], input.input)){
+                if(!verifier.verifyTx(_proofs.a[i*num_chall+j], [_proofs.b1[i*num_chall+j], _proofs.b2[i*num_chall+j]], _proofs.c[i*num_chall+j], input.input)){
                     results[i] = false;
                     break;
                 }
