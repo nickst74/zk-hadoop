@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -24,15 +25,20 @@ import java.nio.channels.ClosedChannelException;
 import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -58,6 +64,7 @@ import org.apache.hadoop.hdfs.util.ByteArrayManager;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.merkle_trees.MerkleTree;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
@@ -122,6 +129,9 @@ public class DFSOutputStream extends FSOutputSummer
   protected final AtomicReference<CachingStrategy> cachingStrategy;
   private FileEncryptionInfo fileEncryptionInfo;
   private int writePacketSize;
+  // a buffer used to store the block data
+  protected byte[] root_hash;
+  protected ByteArrayOutputStream block_buffer;
 
   /** Use {@link ByteArrayManager} to create buffer for non-heartbeat packets.*/
   protected DFSPacket createPacket(int packetSize, int chunksPerPkt,
@@ -191,6 +201,7 @@ public class DFSOutputStream extends FSOutputSummer
     this.blockSize = stat.getBlockSize();
     this.blockReplication = stat.getReplication();
     this.fileEncryptionInfo = stat.getFileEncryptionInfo();
+    this.block_buffer = new ByteArrayOutputStream();
     this.cachingStrategy = new AtomicReference<>(
         dfsClient.getDefaultWriteCachingStrategy());
     this.addBlockFlags = EnumSet.noneOf(AddBlockFlag.class);
@@ -322,6 +333,14 @@ public class DFSOutputStream extends FSOutputSummer
       getStreamer().setBytesCurBlock(lastBlock.getBlockSize());
       adjustPacketChunkSize(stat);
       getStreamer().setPipelineInConstruction(lastBlock);
+      // TODO: Check for a better way to get the last part of the data
+      FSDataInputStream in = null;
+      Configuration conf = new Configuration();
+      FileSystem fs = FileSystem.get(conf);
+      Path inFile = new Path(src);
+      in = fs.open(inFile);
+      //take the data of the current block in order to fill it and create the total merkle tree
+      IOUtils.copyLarge(in, this.block_buffer, initialFileSize-lastBlock.getBlockSize(), lastBlock.getBlockSize());
     } else {
       computePacketChunkSize(dfsClient.getConf().getWritePacketSize(),
           bytesPerChecksum);
@@ -425,7 +444,8 @@ public class DFSOutputStream extends FSOutputSummer
     currentPacket.writeData(b, offset, len);
     currentPacket.incNumChunks();
     getStreamer().incBytesCurBlock(len);
-
+    // write the packet data to our buffer (accumulating the whole block)
+    this.block_buffer.write(b, offset, len);
     // If packet is full, enqueue it for transmission
     //
     if (currentPacket.getNumChunks() == currentPacket.getMaxChunks() ||
@@ -499,6 +519,15 @@ public class DFSOutputStream extends FSOutputSummer
    */
   protected void endBlock() throws IOException {
     if (getStreamer().getBytesCurBlock() == blockSize) {
+      int chunk_size = this.dfsClient.getConf().getDefaultChunkSize();
+      MerkleTree tree = new MerkleTree(this.block_buffer.toByteArray(),
+                                        chunk_size,
+                                        (int) this.blockSize / chunk_size);
+      this.block_buffer.reset();
+      tree.build();
+      //System.out.println("Tree built! Root length is -> "+tree.getRoot().length);
+      this.root_hash = tree.getRoot();
+      getStreamer().root_hash = this.root_hash;
       setCurrentPacketToEmpty();
       enqueueCurrentPacket();
       getStreamer().setBytesCurBlock(0);
@@ -728,6 +757,15 @@ public class DFSOutputStream extends FSOutputSummer
       //
       // If there is data in the current buffer, send it across
       //
+      int chunk_size = this.dfsClient.getConf().getDefaultChunkSize();
+      MerkleTree tree = new MerkleTree(this.block_buffer.toByteArray(),
+                                        chunk_size,
+                                        (int) this.blockSize / chunk_size);
+      this.block_buffer.reset();
+      tree.build();
+      //System.out.println("Tree built! Root length is -> "+tree.getRoot().length);
+      this.root_hash = tree.getRoot();
+      getStreamer().root_hash = this.root_hash;
       getStreamer().queuePacket(currentPacket);
       currentPacket = null;
       toWaitFor = getStreamer().getLastQueuedSeqno();
@@ -904,6 +942,8 @@ public class DFSOutputStream extends FSOutputSummer
     long sleeptime = conf.getBlockWriteLocateFollowingInitialDelayMs();
     boolean fileComplete = false;
     int retries = conf.getNumBlockWriteLocateFollowingRetry();
+    System.out.println("Uploading hash for block: "+last.getBlockId());
+    this.dfsClient.getConnection().uploadHash(last.getBlockId(), root_hash);
     while (!fileComplete) {
       fileComplete =
           dfsClient.namenode.complete(src, dfsClient.clientName, last, fileId);

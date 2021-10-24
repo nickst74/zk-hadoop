@@ -1,0 +1,12 @@
+# Eclipse
+.classpath
+.project
+.settings/
+.metadata/
+
+# Maven
+log/
+target/
+
+# VSCode
+.vscode
