@@ -28,8 +28,8 @@ public class MerkleProof extends MerkleTree{
     //private final BigInteger seed;
     private BigInteger next;
     
-    public MerkleProof(byte[] block, BigInteger block_id, BigInteger seed) {
-        super(block);
+    public MerkleProof(byte[] block, int chunk_size, int chunk_count, BigInteger block_id, BigInteger seed) {
+        super(block, chunk_size, chunk_count);
         this.block_id = block_id;
         //this.seed = seed;
         this.next = seed;
@@ -45,7 +45,7 @@ public class MerkleProof extends MerkleTree{
 
     private int next_challenge(){
         this.next = new BigInteger(Hash.sha3(encode_packed(this.next, this.block_id)));
-        return this.next.mod(BigInteger.valueOf(Config.CHUNK_COUNT)).intValue();
+        return this.next.mod(BigInteger.valueOf(this.chunks.size())).intValue();
     }
 
     private void appendToList(List<String> ls, byte[] items){
@@ -60,7 +60,7 @@ public class MerkleProof extends MerkleTree{
      * @return List with inputs for zokrates executable
      */
     private LinkedList<String> findWitnessInput(int index) {
-        assert(index < Config.CHUNK_COUNT);
+        assert(index < this.chunks.size());
         LinkedList<String> acc = new LinkedList<String>();
         List<String> path = new LinkedList<String>();
         // First add the index to the list

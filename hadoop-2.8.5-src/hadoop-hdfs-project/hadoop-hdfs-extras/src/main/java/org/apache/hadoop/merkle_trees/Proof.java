@@ -10,6 +10,12 @@ public class Proof {
     public BigInteger b[][];
     public BigInteger c[];
 
+    private BigInteger objToBigInt(Object obj){
+        String str = (String) obj;
+        // get rid of '0x' prefix
+        return new BigInteger(str.substring(2), 16);
+    }
+
     public Proof(){
         this.a = new BigInteger[2];
         this.b = new BigInteger[2][2];
@@ -33,12 +39,6 @@ public class Proof {
         b[1][1] = objToBigInt(arr_b1.get(1));
         c[0] = objToBigInt(arr_c.get(0));
         c[1] = objToBigInt(arr_c.get(1));
-    }
-
-    private BigInteger objToBigInt(Object obj){
-        String str = (String) obj;
-        // get rid of '0x' prefix
-        return new BigInteger(str.substring(2), 16);
     }
 
 }

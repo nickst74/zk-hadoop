@@ -190,6 +190,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
 
+import org.apache.hadoop.blockchain.ClientConnection;
+
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and
  * perform basic file tasks.  It uses the ClientProtocol
@@ -237,6 +239,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   private final int smallBufferSize;
   private final long serverDefaultsValidityPeriod;
+
+  private final ClientConnection con;
+
+  public ClientConnection getConnection(){
+    return this.con;
+  }
 
   public DfsClientConf getConf() {
     return dfsClientConf;
@@ -388,6 +396,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.saslClient = new SaslDataTransferClient(
         conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
+    // initialize the client connection
+    this.con = new ClientConnection(conf.get("dfs.blockchain.address"), conf.get("dfs.client.wallet.pkey"), conf.get("dfs.contract.address"));
   }
 
   /**

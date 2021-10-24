@@ -17,5 +17,90 @@
 <!-- Put site-specific property overrides in this file. -->
 
 <configuration>
-
+  <property>
+    <name>dfs.blocksize</name>
+    <value>33554432</value> <!-- had to lower it down for the merkle proofs to 32Mb -->
+    <description>
+        The default block size for new files, in bytes.
+        You can use the following suffix (case insensitive):
+        k(kilo), m(mega), g(giga), t(tera), p(peta), e(exa) to specify the size (such as 128k, 512m, 1g, etc.),
+        Or provide complete size in bytes (such as 134217728 for 128 MB).
+    </description>
+  </property>
+  <property>
+    <name>dfs.merkle.chunksize</name>
+    <value>512</value>
+    <description>
+        The default chunk size in which the blocks are split, in bytes.
+    </description>
+  </property>
+  <property>
+    <name>dfs.blockchain.address</name>
+    <value></value>
+    <description>
+      The address of the contract on the blockchain.
+    </description>
+  </property>
+  <property>
+    <name>dfs.contract.address</name>
+    <value></value>
+    <description>
+      The address of the contract on the blockchain.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.wallet.pkey</name>
+    <value></value>
+    <description>
+      The address that the client uses to communicate
+      with the blockchain.
+    </description>
+  </property>
+  <property>
+    <name>dfs.namenode.wallet.pkey</name>
+    <value></value>
+    <description>
+      The address that the namenode uses to communicate
+      with the blockchain.
+    </description>
+  </property>
+  <property>
+    <name>dfs.datanode.address.selector</name>
+    <value></value>
+    <description>
+      Index to determine the correct datanode address.
+    </description>
+  </property>
+  <property>
+    <name>dfs.datanode.wallet.pkey.1</name>
+    <value></value>
+    <description>
+      The address that the datanode uses to communicate
+      with the blockchain.
+    </description>
+  </property>
+  <property>
+    <name>dfs.datanode.wallet.pkey.2</name>
+    <value></value>
+    <description>
+      The address that the datanode uses to communicate
+      with the blockchain.
+    </description>
+  </property>
+  <property>
+    <name>dfs.datanode.wallet.pkey.3</name>
+    <value></value>
+    <description>
+      The address that the datanode uses to communicate
+      with the blockchain.
+    </description>
+  </property>
+  <property>
+    <name>dfs.datanode.wallet.pkey.4</name>
+    <value></value>
+    <description>
+      The address that the datanode uses to communicate
+      with the blockchain.
+    </description>
+  </property>
 </configuration>

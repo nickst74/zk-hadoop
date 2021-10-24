@@ -1,10 +1,10 @@
 package org.apache.hadoop.merkle_trees;
 
-import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+//import java.math.BigInteger;
+//import java.nio.file.Files;
+//import java.nio.file.Paths;
+//import java.util.List;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Representation of a classic Merkle Tree created
@@ -64,13 +64,15 @@ public class MerkleTree{
      * Fills all chunks with the
      * repeating byte sequence from the given block of data.
      * @param block The raw data
+     * @param chunk_size The size of each chunk in bytes
+     * @param chunk_count The number of chunks in which the data is split
      */
-    public MerkleTree(byte[] block){
-        assert(block.length <= Config.BLOCK_SIZE);
+    public MerkleTree(byte[] block, int chunk_size, int chunk_count){
+        assert(block.length <= chunk_count * chunk_size);
         // Just in case we have an empty block
         if(block.length == 0){
             // Initialize all zeroes
-            block = new byte[Config.BLOCK_SIZE];
+            block = new byte[chunk_size];
         }
         // init fields
         this.leaves = new ArrayList<Node>();
@@ -78,11 +80,11 @@ public class MerkleTree{
         this.root = null;
         // fill all chunks with the repeating byte sequence from input/block
         int block_index = 0;
-        for (int i = 0; i < Config.CHUNK_COUNT; i++) {
+        for (int i = 0; i < chunk_count; i++) {
             int chunk_index = 0;
-            byte[] ch = new byte[Config.CHUNK_SIZE];
-            while (chunk_index < Config.CHUNK_SIZE) {
-                int to_copy = Math.min(Config.CHUNK_SIZE - chunk_index, block.length - block_index);
+            byte[] ch = new byte[chunk_size];
+            while (chunk_index < chunk_size) {
+                int to_copy = Math.min(chunk_size - chunk_index, block.length - block_index);
                 System.arraycopy(block, block_index, ch, chunk_index, to_copy);
                 chunk_index += to_copy;
                 block_index += to_copy;
@@ -100,7 +102,7 @@ public class MerkleTree{
     public void build(){
         ArrayList<Node> current, prev;
         // Firstly initialize leaves
-        for (int i = 0; i < Config.CHUNK_COUNT; i++) {
+        for (int i = 0; i < this.chunks.size(); i++) {
             this.leaves.add(new Node(this.chunks.get(i)));
         }
         current = this.leaves;
@@ -119,13 +121,13 @@ public class MerkleTree{
         return this.root.getHash();
     }
 
-
+/*
     public static void main( String[] args )
     {
         try {    
             byte[] d = Files.readAllBytes(Paths.get("/home/nick/Desktop/zok_test/empty.txt"));
             //System.out.println(d.length);
-            MerkleProof tr = new MerkleProof(d, BigInteger.valueOf(1092L), BigInteger.valueOf(1));
+            MerkleProof tr = new MerkleProof(d, Config.CHUNK_SIZE, Config.CHUNK_COUNT, BigInteger.valueOf(1092L), BigInteger.valueOf(1));
             tr.build();
             byte[] result = tr.getRoot();
             System.out.println(Util.bytesToHex(result));
@@ -138,5 +140,5 @@ public class MerkleTree{
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+    }*/
 }

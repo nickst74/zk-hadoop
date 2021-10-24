@@ -1,4 +1,4 @@
-package org.apache.hadoop.wrappers;
+package org.apache.hadoop.blockchain;
 
 import io.reactivex.Flowable;
 import io.reactivex.functions.Function;
