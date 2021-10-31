@@ -1,5 +1,7 @@
 package org.apache.hadoop.blockchain;
 
+import java.math.BigInteger;
+
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.crypto.Credentials;
@@ -15,7 +17,7 @@ public class Connection {
         this.creds = Credentials.create(wallet_pk);
         Data wrapper = null;
         try {
-            wrapper = Data.load(contract_address, this.web3j, this.creds, new DefaultGasProvider());
+            wrapper = Data.load(contract_address, this.web3j, this.creds, DefaultGasProvider.GAS_PRICE, BigInteger.valueOf(6000000));
         } catch (Exception e) {
             System.out.println("Failed to resolve smart contract address. Please ensure its format is valid.");
             System.exit(1);

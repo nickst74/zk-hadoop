@@ -121,5 +121,14 @@ contract Data {
         roots[_block_id] = _root;
     }
 
+    // just for debugging reasons
+    function debug_digest(uint _block_id) external view returns(bytes32){
+        return roots[_block_id];
+    }
+
+    function debug_seed(address _addr) external view returns(uint){
+        return seeds[_addr];
+    }
+
 }
 

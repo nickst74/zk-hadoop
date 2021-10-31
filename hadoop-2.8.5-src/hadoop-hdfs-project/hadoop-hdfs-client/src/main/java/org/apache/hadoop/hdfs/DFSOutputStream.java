@@ -130,7 +130,6 @@ public class DFSOutputStream extends FSOutputSummer
   private FileEncryptionInfo fileEncryptionInfo;
   private int writePacketSize;
   // a buffer used to store the block data
-  protected byte[] root_hash;
   protected ByteArrayOutputStream block_buffer;
 
   /** Use {@link ByteArrayManager} to create buffer for non-heartbeat packets.*/
@@ -333,7 +332,8 @@ public class DFSOutputStream extends FSOutputSummer
       getStreamer().setBytesCurBlock(lastBlock.getBlockSize());
       adjustPacketChunkSize(stat);
       getStreamer().setPipelineInConstruction(lastBlock);
-      // TODO: Check for a better way to get the last part of the data
+      // When appending to existing blocks reload data of last block (that got modified)
+      // and calculate merkle root 
       FSDataInputStream in = null;
       Configuration conf = new Configuration();
       FileSystem fs = FileSystem.get(conf);
@@ -525,9 +525,8 @@ public class DFSOutputStream extends FSOutputSummer
                                         (int) this.blockSize / chunk_size);
       this.block_buffer.reset();
       tree.build();
-      //System.out.println("Tree built! Root length is -> "+tree.getRoot().length);
-      this.root_hash = tree.getRoot();
-      getStreamer().root_hash = this.root_hash;
+      //System.out.println("Generated hash from endblock : "+tree.getRoot());
+      getStreamer().root_hash = tree.getRoot();
       setCurrentPacketToEmpty();
       enqueueCurrentPacket();
       getStreamer().setBytesCurBlock(0);
@@ -763,9 +762,8 @@ public class DFSOutputStream extends FSOutputSummer
                                         (int) this.blockSize / chunk_size);
       this.block_buffer.reset();
       tree.build();
-      //System.out.println("Tree built! Root length is -> "+tree.getRoot().length);
-      this.root_hash = tree.getRoot();
-      getStreamer().root_hash = this.root_hash;
+      //System.out.println("Generated hash from flush interval "+tree.getRoot());
+      getStreamer().root_hash = tree.getRoot();
       getStreamer().queuePacket(currentPacket);
       currentPacket = null;
       toWaitFor = getStreamer().getLastQueuedSeqno();
@@ -942,8 +940,7 @@ public class DFSOutputStream extends FSOutputSummer
     long sleeptime = conf.getBlockWriteLocateFollowingInitialDelayMs();
     boolean fileComplete = false;
     int retries = conf.getNumBlockWriteLocateFollowingRetry();
-    System.out.println("Uploading hash for block: "+last.getBlockId());
-    this.dfsClient.getConnection().uploadHash(last.getBlockId(), root_hash);
+    this.dfsClient.getConnection().uploadHash(last.getBlockId(), getStreamer().root_hash);
     while (!fileComplete) {
       fileComplete =
           dfsClient.namenode.complete(src, dfsClient.clientName, last, fileId);
@@ -974,6 +971,7 @@ public class DFSOutputStream extends FSOutputSummer
         }
       }
     }
+    this.dfsClient.getConnection().checkResults();
   }
 
   @VisibleForTesting

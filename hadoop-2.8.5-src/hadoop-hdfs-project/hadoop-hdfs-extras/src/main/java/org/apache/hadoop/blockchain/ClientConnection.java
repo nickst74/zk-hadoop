@@ -7,6 +7,8 @@ import java.util.concurrent.CompletableFuture;
 
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
+import org.apache.hadoop.merkle_trees.Util;
+
 public class ClientConnection extends Connection {
 
     private class TX{
@@ -35,19 +37,28 @@ public class ClientConnection extends Connection {
      * @param root The merkle root hash of the block
      */
     public void uploadHash(long block_id, byte[] root){
+        System.out.println("Uploading hash for block: "+block_id+" -> 0x" + Util.bytesToHex(root));
         CompletableFuture<TransactionReceipt> cf_tr = this.contract_wrapper.add_digest(BigInteger.valueOf(block_id), root).sendAsync();
         this.txs.add(new TX(block_id, cf_tr));
     }
 
+    /**
+     * Used after all root upload transaction were sent to collect receipts/get results.
+     */
     public void checkResults(){
         System.out.println("Checking results for uploaded hashes (total: "+this.txs.size()+")");
         for (TX tx : this.txs) {
+            System.out.print(tx.block_id+": merkle root upload status -> ");
             try {
                 // TODO: maybe add timeout
                 TransactionReceipt tr = tx.cf_tr.get();
-                System.out.println(tx.block_id+": merkle root upload status is -> "+tr.getStatus());
+                if(tr.getStatus().equals("0x1")){
+                    System.out.println("SUCCESS");
+                } else {
+                    System.out.println("WEIRD STATUS " + tr.getStatus());
+                }
             } catch (Exception e) {
-                System.out.println(tx.block_id+": Exception thrown during transaction receipt retrieval");
+                System.out.println("EXCEPTION "+e.getMessage());
                 //e.printStackTrace();
             }
         }
