@@ -27,7 +27,11 @@ import java.util.concurrent.TimeUnit;
 public interface HdfsClientConfigKeys {
   long SECOND = 1000L;
   long MINUTE = 60 * SECOND;
-
+  // Some config keys for the merkle proofs
+  // and connection to blockchain
+  String  DFS_BLOCKCHAIN_ADDRESS_KEY = "dfs.blockchain.address";
+  String  DFS_CLIENT_WALLET_PK_KEY = "dfs.client.wallet.pkey";
+  String  DFS_CONTRACT_ADDRESS_KEY = "dfs.contract.address";
   String  DFS_CHUNK_SIZE_KEY = "dfs.merkle.chunksize";
   int     DFS_CHUNK_SIZE_DEFAULT = 512;
   String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";

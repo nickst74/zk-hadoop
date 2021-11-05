@@ -65,14 +65,7 @@
     </description>
   </property>
   <property>
-    <name>dfs.datanode.address.selector</name>
-    <value></value>
-    <description>
-      Index to determine the correct datanode address.
-    </description>
-  </property>
-  <property>
-    <name>dfs.datanode.wallet.pkey.1</name>
+    <name>dfs.datanode.wallet.pkey</name>
     <value></value>
     <description>
       The address that the datanode uses to communicate
@@ -80,27 +73,11 @@
     </description>
   </property>
   <property>
-    <name>dfs.datanode.wallet.pkey.2</name>
+    <name>dfs.zokrates.dir.path</name>
     <value></value>
     <description>
-      The address that the datanode uses to communicate
-      with the blockchain.
-    </description>
-  </property>
-  <property>
-    <name>dfs.datanode.wallet.pkey.3</name>
-    <value></value>
-    <description>
-      The address that the datanode uses to communicate
-      with the blockchain.
-    </description>
-  </property>
-  <property>
-    <name>dfs.datanode.wallet.pkey.4</name>
-    <value></value>
-    <description>
-      The address that the datanode uses to communicate
-      with the blockchain.
+      Path to the directory that contains
+      the zokrates executable.
     </description>
   </property>
 </configuration>

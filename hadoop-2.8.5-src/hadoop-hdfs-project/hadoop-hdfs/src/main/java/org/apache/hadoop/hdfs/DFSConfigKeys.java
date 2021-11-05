@@ -32,6 +32,17 @@ import org.apache.hadoop.http.HttpConfig;
  */
 @InterfaceAudience.Private
 public class DFSConfigKeys extends CommonConfigurationKeys {
+  // config keys for connection to blockchain
+  public static final String  DFS_BLOCKCHAIN_ADDRESS_KEY = HdfsClientConfigKeys.DFS_BLOCKCHAIN_ADDRESS_KEY;
+  public static final String  DFS_DATANODE_WALLET_PK_KEY = "dfs.datanode.wallet.pkey";
+  public static final String  DFS_CONTRACT_ADDRESS_KEY = HdfsClientConfigKeys.DFS_CONTRACT_ADDRESS_KEY;
+  
+  public static final String  DFS_CHUNK_SIZE_KEY = HdfsClientConfigKeys.DFS_CHUNK_SIZE_KEY;
+  public static final int DFS_CHUNK_SIZE_DEFAULT = HdfsClientConfigKeys.DFS_CHUNK_SIZE_DEFAULT;
+  public static final String DFS_CHALLENGE_COUNT_KEY = "dfs.zkproofs.challenge.count";
+  public static final int DFS_CHALLENGE_COUNT_DEFAULT = 1;
+  public static final String  DFS_ZOKRATES_DIR_PATH_KEY = "dfs.zokrates.dir.path";
+
   public static final String  DFS_BLOCK_SIZE_KEY =
       HdfsClientConfigKeys.DFS_BLOCK_SIZE_KEY;
   public static final long    DFS_BLOCK_SIZE_DEFAULT =
