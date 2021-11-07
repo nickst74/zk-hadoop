@@ -15,7 +15,6 @@ public class MerkleTree{
 
     protected Node root;
     protected ArrayList<Node> leaves;
-    protected ArrayList<byte[]> chunks;
 
     protected class Node{
         private byte[] hash;
@@ -61,8 +60,8 @@ public class MerkleTree{
     }
 
     /**
-     * Fills all chunks with the
-     * repeating byte sequence from the given block of data.
+     * Fill all the leaves with correpsonding chunks' hashes.
+     * Chunks are formeds from repeating the sequence of bytes of the given block.
      * @param block The raw data
      * @param chunk_size The size of each chunk in bytes
      * @param chunk_count The number of chunks in which the data is split
@@ -76,37 +75,36 @@ public class MerkleTree{
         }
         // init fields
         this.leaves = new ArrayList<Node>();
-        this.chunks = new ArrayList<byte[]>();
         this.root = null;
-        // fill all chunks with the repeating byte sequence from input/block
+        // fill chunk and compute hash
         int block_index = 0;
         for (int i = 0; i < chunk_count; i++) {
             int chunk_index = 0;
-            byte[] ch = new byte[chunk_size];
+            byte[] current_chunk = new byte[chunk_size];
             while (chunk_index < chunk_size) {
                 int to_copy = Math.min(chunk_size - chunk_index, block.length - block_index);
-                System.arraycopy(block, block_index, ch, chunk_index, to_copy);
+                System.arraycopy(block, block_index, current_chunk, chunk_index, to_copy);
                 chunk_index += to_copy;
                 block_index += to_copy;
                 if(block_index >= block.length){
                     block_index = 0;
                 }
             }
-            this.chunks.add(ch);
+            this.leaves.add(new Node(current_chunk));
         }
     }
 
+    protected MerkleTree(){
+        /* nothing */
+    }
+
     /**
-     * Builds the Merkle Tree from the stored raw data.
+     * Builds the Merkle Tree from the initialized leaves.
      */
     public void build(){
         ArrayList<Node> current, prev;
-        // Firstly initialize leaves
-        for (int i = 0; i < this.chunks.size(); i++) {
-            this.leaves.add(new Node(this.chunks.get(i)));
-        }
         current = this.leaves;
-        // Building the rest of the tree from bottom-up
+        // Building the tree from bottom-up
         while (current.size() > 1) {
             prev = current;
             current = new ArrayList<Node>();
