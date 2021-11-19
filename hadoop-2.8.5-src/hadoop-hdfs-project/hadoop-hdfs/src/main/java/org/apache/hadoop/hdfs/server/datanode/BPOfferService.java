@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -102,6 +103,9 @@ class BPOfferService {
       new ReentrantReadWriteLock();
   private final Lock mReadLock  = mReadWriteLock.readLock();
   private final Lock mWriteLock = mReadWriteLock.writeLock();
+
+  // flag to check if merkle proofs are already being generated
+  public AtomicBoolean proof_gen_in_progress = new AtomicBoolean(false);
 
   // utility methods to acquire and release read lock and write lock
   void readLock() {
@@ -829,6 +833,10 @@ class BPOfferService {
       return true;
     }
     return isAlive();
+  }
+
+  public BPServiceActor getBpServiceToActive() {
+      return this.bpServiceToActive;
   }
 
 }

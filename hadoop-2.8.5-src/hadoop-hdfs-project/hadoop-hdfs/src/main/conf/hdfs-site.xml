@@ -35,6 +35,13 @@
     </description>
   </property>
   <property>
+    <name>dfs.zkproofs.challenge.count</name>
+    <value></value>
+    <description>
+        The number of challenges per block to be submitted on block reporting.
+    </description>
+  </property>
+  <property>
     <name>dfs.blockchain.address</name>
     <value></value>
     <description>

@@ -157,13 +157,13 @@ public class MerkleProof extends MerkleTree{
         command.add("generate-proof");
         pb = new ProcessBuilder(command);
         pb.directory(new File(zokDir));
-        pb.inheritIO();
+        //pb.inheritIO();
         pr = pb.start();
         pr.waitFor();
 
         // get result from proof.json file
         JSONParser parser = new JSONParser();
-        JSONObject obj = (JSONObject) parser.parse(new FileReader(zokDir+"proof.json"));
+        JSONObject obj = (JSONObject) parser.parse(new FileReader(zokDir+"/proof.json"));
         Proof proof = new Proof((JSONObject) obj.get("proof"));
 
         // After getting the result, unlock

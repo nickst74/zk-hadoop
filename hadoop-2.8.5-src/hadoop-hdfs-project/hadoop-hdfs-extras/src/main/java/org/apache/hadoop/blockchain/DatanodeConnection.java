@@ -10,8 +10,8 @@ import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
 public class DatanodeConnection extends Connection {
     
-    public DatanodeConnection(String blockchain, String wallet_pk, String contract_address, int chall){
-        super(blockchain, wallet_pk, contract_address);
+    public DatanodeConnection(String blockchain, String wallet_pk){
+        super(blockchain, wallet_pk);
     }
 
     private static class FlattenedProofs {

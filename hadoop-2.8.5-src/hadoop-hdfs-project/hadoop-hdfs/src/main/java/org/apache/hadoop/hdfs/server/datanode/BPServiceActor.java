@@ -22,6 +22,8 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
@@ -30,7 +32,11 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -59,6 +65,8 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.merkle_trees.MerkleProof;
+import org.apache.hadoop.merkle_trees.Proof;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
@@ -67,6 +75,15 @@ import org.slf4j.Logger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHUNK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHUNK_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHALLENGE_COUNT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHALLENGE_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ZOKRATES_DIR_PATH_KEY;
 
 /**
  * A thread per active or standby namenode to perform:
@@ -107,6 +124,8 @@ class BPServiceActor implements Runnable {
   private DatanodeRegistration bpRegistration;
   final LinkedList<BPServiceActorAction> bpThreadQueue 
       = new LinkedList<BPServiceActorAction>();
+
+  private long fullBlockReportLeaseId = 0;
 
   BPServiceActor(InetSocketAddress nnAddr, InetSocketAddress lifelineNnAddr,
       BPOfferService bpos) {
@@ -318,95 +337,241 @@ class BPServiceActor implements Runnable {
     }
     return prevBlockReportId;
   }
+  
+  // Initializes a merkle proof instance with the data and build merkle tree
+  private final class MPTask implements Callable<MerkleProof> {
+    private long block_id;
+    private BigInteger seed;
+    private int chunk_size, chunk_count, chall_count;
 
-  /**
-   * Report the list blocks to the Namenode
-   * @return DatanodeCommands returned by the NN. May be null.
-   * @throws IOException
-   */
-  List<DatanodeCommand> blockReport(long fullBrLeaseId) throws IOException {
-    final ArrayList<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>();
-
-    // Flush any block information that precedes the block report. Otherwise
-    // we have a chance that we will miss the delHint information
-    // or we will report an RBW replica after the BlockReport already reports
-    // a FINALIZED one.
-    ibrManager.sendIBRs(bpNamenode, bpRegistration,
-        bpos.getBlockPoolId(), dn.getMetrics());
-
-    long brCreateStartTime = monotonicNow();
-    Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
-        dn.getFSDataset().getBlockReports(bpos.getBlockPoolId());
-
-    // Convert the reports to the format expected by the NN.
-    int i = 0;
-    int totalBlockCount = 0;
-    StorageBlockReport reports[] =
-        new StorageBlockReport[perVolumeBlockLists.size()];
-
-    for(Map.Entry<DatanodeStorage, BlockListAsLongs> kvPair : perVolumeBlockLists.entrySet()) {
-      BlockListAsLongs blockList = kvPair.getValue();
-      reports[i++] = new StorageBlockReport(kvPair.getKey(), blockList);
-      totalBlockCount += blockList.getNumberOfBlocks();
+    MPTask(long block_id, BigInteger seed, int chunk_size, int chunk_count, int chall_count) {
+      this.block_id = block_id;
+      this.seed = seed;
+      this.chunk_size = chunk_size;
+      this.chunk_count = chunk_count;
+      this.chall_count = chall_count;
     }
 
-    // Send the reports to the NN.
-    int numReportsSent = 0;
-    int numRPCs = 0;
-    boolean success = false;
-    long brSendStartTime = monotonicNow();
-    long reportId = generateUniqueBlockReportId();
-    try {
-      if (totalBlockCount < dnConf.blockReportSplitThreshold) {
-        // Below split threshold, send all reports in a single message.
-        DatanodeCommand cmd = bpNamenode.blockReport(
-            bpRegistration, bpos.getBlockPoolId(), reports,
-              new BlockReportContext(1, 0, reportId, fullBrLeaseId));
-        numRPCs = 1;
-        numReportsSent = reports.length;
-        if (cmd != null) {
-          cmds.add(cmd);
-        }
-      } else {
-        // Send one block report per message.
-        for (int r = 0; r < reports.length; r++) {
-          StorageBlockReport singleReport[] = { reports[r] };
-          DatanodeCommand cmd = bpNamenode.blockReport(
-              bpRegistration, bpos.getBlockPoolId(), singleReport,
-              new BlockReportContext(reports.length, r, reportId,
-                  fullBrLeaseId));
-          numReportsSent++;
-          numRPCs++;
-          if (cmd != null) {
-            cmds.add(cmd);
+    @Override
+    public MerkleProof call() {
+      // Read block from filesystem
+      ExtendedBlock eb;
+      try {
+        eb = new ExtendedBlock(bpos.getBlockPoolId(),
+                                              dn.data.getStoredBlock(bpos.getBlockPoolId(), block_id));
+        InputStream in_stream = dn.data.getBlockInputStream(eb, 0);
+        byte[] buffer = new byte[(int) dn.data.getLength(eb)];
+        IOUtils.readFully(in_stream, buffer, 0, buffer.length);
+        // create initialize MerkleProof and build the merkle tree
+        MerkleProof mp = new MerkleProof(buffer, chunk_size, chunk_count, BigInteger.valueOf(block_id), seed, chall_count);
+        mp.build();
+        // return MerkleProof for proof generation phase
+        return mp;
+      } catch(IOException e){
+        // if it fails, just return null so we can discard it later
+        return null;
+      }
+    }
+
+  }
+
+  class ProofGenT implements Runnable {
+    private List<MerkleProof> mps;
+
+    public ProofGenT(List<Future<MerkleProof>> fmps){
+      this.mps = new ArrayList<MerkleProof>();
+      for (Future<MerkleProof> fmp : fmps) {
+        try {
+          MerkleProof mp = fmp.get();
+          if(mp != null){
+            this.mps.add(mp);
           }
+        } catch (Exception e) {
+          // just skip if it failed
         }
       }
-      success = true;
-    } finally {
-      // Log the block report processing stats from Datanode perspective
-      long brSendCost = monotonicNow() - brSendStartTime;
-      long brCreateCost = brSendStartTime - brCreateStartTime;
-      dn.getMetrics().addBlockReport(brSendCost);
-      final int nCmds = cmds.size();
-      LOG.info((success ? "S" : "Uns") +
-          "uccessfully sent block report 0x" +
-          Long.toHexString(reportId) + ",  containing " + reports.length +
-          " storage report(s), of which we sent " + numReportsSent + "." +
-          " The reports had " + totalBlockCount +
-          " total blocks and used " + numRPCs +
-          " RPC(s). This took " + brCreateCost +
-          " msec to generate and " + brSendCost +
-          " msecs for RPC and NN processing." +
-          " Got back " +
-          ((nCmds == 0) ? "no commands" :
-              ((nCmds == 1) ? "one command: " + cmds.get(0) :
-                  (nCmds + " commands: " + Joiner.on("; ").join(cmds)))) +
-          ".");
+      LOG.info("I have MerkleProof valid instances total -> "+mps.size());
     }
-    scheduler.updateLastBlockReportTime(monotonicNow());
-    scheduler.scheduleNextBlockReport();
-    return cmds.size() == 0 ? null : cmds;
+
+    @Override
+    public void run() {
+      try{
+        // for all challenges generate the proofs
+        List<BigInteger> block_ids = new ArrayList<>();
+        List<List<Proof>> proofs = new ArrayList<>();
+        for (MerkleProof mp : this.mps) {
+          block_ids.add(mp.getBlock_id());
+          LOG.info("Generating proofs for BlockPool-BlockId: "+bpos.getBlockPoolId()+"-"+mp.getBlock_id());
+          proofs.add(mp.produce_proofs(dn.getConf().get(DFS_ZOKRATES_DIR_PATH_KEY)));
+        }
+        if (!block_ids.isEmpty()) {
+          // upload the proofs and wait for the result
+          LOG.info("Uploading block report to blockchain for BlockPool: "+bpos.getBlockPoolId());
+          for (int i = 0; i < block_ids.size(); i++) {
+              LOG.info("Proof for BlockId: "+block_ids.get(i));
+              for (int j = 0; j < proofs.get(i).size(); j++) {
+                LOG.info("Proof "+j+":\n"+proofs.get(i).get(j).a[0]+"\n"+proofs.get(i).get(j).a[1]+"\n"+proofs.get(i).get(j).b[0][0]+"\n"+proofs.get(i).get(j).b[0][1]+"\n"+proofs.get(i).get(j).b[1][0]+"\n"+proofs.get(i).get(j).b[1][1]+"\n"+proofs.get(i).get(j).c[0]+"\n"+proofs.get(i).get(j).c[1]);
+              }
+          }
+          
+          dn.getCon().upload_proofs(block_ids, proofs);
+        }
+      } finally{
+        // finally unluck the proof gen for the BlockPool
+        LOG.info("Releasing lock");
+        bpos.proof_gen_in_progress.set(false);
+      }
+    }
+  }
+
+
+  /**
+   * Report the list blocks to the Namenode and process any commands issued.
+   * Also report to the blockchain if needed
+   */
+  class BlockReportT implements Runnable {
+    // only upload to blockchain if reporting to ACTIVE NN
+    private final boolean upload_br;
+
+    public BlockReportT(boolean upload_br){
+      this.upload_br = upload_br;
+    }
+    
+    @Override
+    public void run() {
+      try {
+        LOG.info("Started block report Thread for BlockPool: "+bpos.getBlockPoolId());
+        final ArrayList<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>();
+
+        // Flush any block information that precedes the block report. Otherwise
+        // we have a chance that we will miss the delHint information
+        // or we will report an RBW replica after the BlockReport already reports
+        // a FINALIZED one.
+        ibrManager.sendIBRs(bpNamenode, bpRegistration,
+            bpos.getBlockPoolId(), dn.getMetrics());
+
+        long brCreateStartTime = monotonicNow();
+        // just keep the readlock only until you get both lists of replicas
+        LOG.info("Reading Filesystem metadata while holding the lock. I handle Active NN? -> "+ upload_br);
+        bpos.readLock();
+        Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
+            dn.getFSDataset().getBlockReports(bpos.getBlockPoolId());
+        if(upload_br && bpos.proof_gen_in_progress.compareAndSet(false, true)){
+          LOG.info("Grabbed the proof gen lock");
+          List<FinalizedReplica> replicas = dn.getFSDataset().getFinalizedBlocks(bpos.getBlockPoolId());
+          bpos.readUnlock();
+          LOG.info("Found Finalized Replicas for upload : " + replicas.size());
+          BigInteger seed = dn.getCon().get_seed();
+          LOG.info("Got my seed : " + seed);
+          if(seed == null || seed.equals(BigInteger.valueOf(0))){
+            LOG.info("Initializing my seed");
+            dn.getCon().init_seed();
+            LOG.info("Seed initialized, releasing lock. No upload at first block report.");
+            bpos.proof_gen_in_progress.set(false);
+          } else {
+            Collection<Callable<MerkleProof>> tasks = new ArrayList<>();
+            for(FinalizedReplica replica : replicas){
+              tasks.add(new MPTask(replica.getBlockId(),
+                                  seed,
+                                  dn.getConf().getInt(DFS_CHUNK_SIZE_KEY, DFS_CHUNK_SIZE_DEFAULT),
+                                  (int) dn.getConf().getLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT)/dn.getConf().getInt(DFS_CHUNK_SIZE_KEY, DFS_CHUNK_SIZE_DEFAULT),
+                                  dn.getConf().getInt(DFS_CHALLENGE_COUNT_KEY, DFS_CHALLENGE_COUNT_DEFAULT)));
+            }
+            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            try {
+              LOG.info("Starting parallel merkle proof init");
+              List<Future<MerkleProof>> future_mps = executor.invokeAll(tasks);
+              // after all threads have finished, start a new thread to produce and submit proofs on bloackchain
+              ProofGenT pgt = new ProofGenT(future_mps);
+              executor.shutdown();
+              LOG.info("Starting proof gen Thread");
+              new Thread(pgt).start();
+            } catch (Exception e) {
+              // if it gets interrrupted, just abort and release lock
+              LOG.info("Something went wrong, releasing proof lock");
+              bpos.proof_gen_in_progress.set(false);
+            }
+          }
+        } else {
+          bpos.readUnlock();
+        }
+
+
+        // Convert the reports to the format expected by the NN.
+        int i = 0;
+        int totalBlockCount = 0;
+        StorageBlockReport reports[] =
+            new StorageBlockReport[perVolumeBlockLists.size()];
+
+        for(Map.Entry<DatanodeStorage, BlockListAsLongs> kvPair : perVolumeBlockLists.entrySet()) {
+          BlockListAsLongs blockList = kvPair.getValue();
+          reports[i++] = new StorageBlockReport(kvPair.getKey(), blockList);
+          totalBlockCount += blockList.getNumberOfBlocks();
+        }
+
+        // Send the reports to the NN.
+        int numReportsSent = 0;
+        int numRPCs = 0;
+        boolean success = false;
+        long brSendStartTime = monotonicNow();
+        long reportId = generateUniqueBlockReportId();
+        try {
+          if (totalBlockCount < dnConf.blockReportSplitThreshold) {
+            // Below split threshold, send all reports in a single message.
+            DatanodeCommand cmd = bpNamenode.blockReport(
+                bpRegistration, bpos.getBlockPoolId(), reports,
+                  new BlockReportContext(1, 0, reportId, fullBlockReportLeaseId));
+            numRPCs = 1;
+            numReportsSent = reports.length;
+            if (cmd != null) {
+              cmds.add(cmd);
+            }
+          } else {
+            // Send one block report per message.
+            for (int r = 0; r < reports.length; r++) {
+              StorageBlockReport singleReport[] = { reports[r] };
+              DatanodeCommand cmd = bpNamenode.blockReport(
+                  bpRegistration, bpos.getBlockPoolId(), singleReport,
+                  new BlockReportContext(reports.length, r, reportId,
+                      fullBlockReportLeaseId));
+              numReportsSent++;
+              numRPCs++;
+              if (cmd != null) {
+                cmds.add(cmd);
+              }
+            }
+          }
+          success = true;
+        } finally {
+          // Log the block report processing stats from Datanode perspective
+          long brSendCost = monotonicNow() - brSendStartTime;
+          long brCreateCost = brSendStartTime - brCreateStartTime;
+          dn.getMetrics().addBlockReport(brSendCost);
+          final int nCmds = cmds.size();
+          LOG.info((success ? "S" : "Uns") +
+              "uccessfully sent block report 0x" +
+              Long.toHexString(reportId) + ",  containing " + reports.length +
+              " storage report(s), of which we sent " + numReportsSent + "." +
+              " The reports had " + totalBlockCount +
+              " total blocks and used " + numRPCs +
+              " RPC(s). This took " + brCreateCost +
+              " msec to generate and " + brSendCost +
+              " msecs for RPC and NN processing." +
+              " Got back " +
+              ((nCmds == 0) ? "no commands" :
+                  ((nCmds == 1) ? "one command: " + cmds.get(0) :
+                      (nCmds + " commands: " + Joiner.on("; ").join(cmds)))) +
+              ".");
+        }
+        scheduler.updateLastBlockReportTime(monotonicNow());
+        scheduler.scheduleNextBlockReport();
+        processCommand(cmds.size() == 0 ? null : cmds.toArray(new DatanodeCommand[cmds.size()]));
+      } catch (IOException e){
+        e.printStackTrace();
+      } finally {
+        fullBlockReportLeaseId = 0;
+      }
+    }
   }
 
   DatanodeCommand cacheReport() throws IOException {
@@ -553,7 +718,7 @@ class BPServiceActor implements Runnable {
         + "; heartBeatInterval=" + dnConf.heartBeatInterval
         + (lifelineSender != null ?
             "; lifelineIntervalMs=" + dnConf.getLifelineIntervalMs() : ""));
-    long fullBlockReportLeaseId = 0;
+    //long fullBlockReportLeaseId = 0;
 
     //
     // Now loop for a long time....
@@ -623,17 +788,18 @@ class BPServiceActor implements Runnable {
               bpos.getBlockPoolId(), dn.getMetrics());
         }
 
-        List<DatanodeCommand> cmds = null;
+        //List<DatanodeCommand> cmds = null;
         boolean forceFullBr =
             scheduler.forceFullBlockReport.getAndSet(false);
         if (forceFullBr) {
           LOG.info("Forcing a full block report to " + nnAddr);
         }
         if ((fullBlockReportLeaseId != 0) || forceFullBr) {
-          cmds = blockReport(fullBlockReportLeaseId);
-          fullBlockReportLeaseId = 0;
+          //cmds = blockReport(fullBlockReportLeaseId);
+          //fullBlockReportLeaseId = 0;
+          new Thread(new BlockReportT(bpos.getBpServiceToActive() == this)).start();
         }
-        processCommand(cmds == null ? null : cmds.toArray(new DatanodeCommand[cmds.size()]));
+        //processCommand(cmds == null ? null : cmds.toArray(new DatanodeCommand[cmds.size()]));
 
         if (!dn.areCacheReportsDisabledForTests()) {
           DatanodeCommand cmd = cacheReport();

@@ -229,6 +229,8 @@ import com.google.protobuf.BlockingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.blockchain.DatanodeConnection;
+
 /**********************************************************
  * DataNode is a class (and program) that stores a set of
  * blocks for a DFS deployment.  A single deployment can
@@ -265,7 +267,7 @@ public class DataNode extends ReconfigurableBase
     implements InterDatanodeProtocol, ClientDatanodeProtocol,
         TraceAdminProtocol, DataNodeMXBean {
   public static final Logger LOG = LoggerFactory.getLogger(DataNode.class);
-  
+
   static{
     HdfsConfiguration.init();
   }
@@ -401,6 +403,8 @@ public class DataNode extends ReconfigurableBase
 
   private ScheduledThreadPoolExecutor metricsLoggerTimer;
 
+  private final DatanodeConnection con;
+
   /**
    * Creates a dummy DataNode for testing purpose.
    */
@@ -408,6 +412,7 @@ public class DataNode extends ReconfigurableBase
   @InterfaceAudience.LimitedPrivate("HDFS")
   DataNode(final Configuration conf) {
     super(conf);
+    this.con = new DatanodeConnection(conf.get(DFS_BLOCKCHAIN_ADDRESS_KEY), conf.get(DFS_DATANODE_WALLET_PK_KEY));
     this.blockScanner = new BlockScanner(this, conf);
     this.tracer = createTracer(conf);
     this.tracerConfigurationManager =
@@ -422,7 +427,7 @@ public class DataNode extends ReconfigurableBase
     this.checkDiskErrorInterval =
         ThreadLocalRandom.current().nextInt(5000, (int) (5000 * 1.25));
     initOOBTimeout();
-  }
+    }
 
   /**
    * Create the DataNode given a configuration, an array of dataDirs,
@@ -432,6 +437,7 @@ public class DataNode extends ReconfigurableBase
            final List<StorageLocation> dataDirs,
            final SecureResources resources) throws IOException {
     super(conf);
+    this.con = new DatanodeConnection(conf.get(DFS_BLOCKCHAIN_ADDRESS_KEY), conf.get(DFS_DATANODE_WALLET_PK_KEY));
     this.tracer = createTracer(conf);
     this.tracerConfigurationManager =
         new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);
@@ -1293,6 +1299,7 @@ public class DataNode extends ReconfigurableBase
     LOG.info("Starting DataNode with maxLockedMemory = " +
         dnConf.maxLockedMemory);
 
+    this.con.connect(this.conf.get(DFS_CONTRACT_ADDRESS_KEY));
     int volFailuresTolerated = dnConf.getVolFailuresTolerated();
     int volsConfigured = dnConf.getVolsConfigured();
     if (volFailuresTolerated < 0 || volFailuresTolerated >= volsConfigured) {
@@ -3330,4 +3337,9 @@ public class DataNode extends ReconfigurableBase
   void setBlockScanner(BlockScanner blockScanner) {
     this.blockScanner = blockScanner;
   }
+
+  public DatanodeConnection getCon() {
+      return this.con;
+  }
+
 }
