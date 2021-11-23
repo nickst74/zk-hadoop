@@ -28,7 +28,7 @@ public class MerkleProof extends MerkleTree{
     private final ArrayList<Integer> challenges;
     private final ArrayList<byte[]> chosen_chunks;
     
-    public MerkleProof(byte[] block, int chunk_size, int chunk_count, BigInteger block_id, BigInteger seed, int chall_count) {
+    public MerkleProof(byte[] block, int chunk_size, int chunk_count, BigInteger block_id, byte[] seed, int chall_count) {
         assert(block.length <= chunk_count * chunk_size);
         // Just in case we have an empty block
         if(block.length == 0){
@@ -66,6 +66,14 @@ public class MerkleProof extends MerkleTree{
         }
     }
 
+    private byte[] encode_packed(byte[] a, BigInteger _b){
+        byte[] ret = new byte[32+a.length];
+        byte[] b = _b.toByteArray();
+        System.arraycopy(b, 0, ret, 32 - b.length, b.length);
+        System.arraycopy(a, 0, ret, ret.length - a.length, a.length);
+        return ret;
+    }
+
     private byte[] encode_packed(BigInteger _a, BigInteger _b){
         byte[] ret = new byte[64];
         byte[] a = _a.toByteArray(), b = _b.toByteArray();
@@ -74,9 +82,10 @@ public class MerkleProof extends MerkleTree{
         return ret;
     }
 
-    private ArrayList<Integer> gen_challenges(BigInteger seed, BigInteger block_id, int chall_count, int chunk_count){
+    private ArrayList<Integer> gen_challenges(byte[] seed, BigInteger block_id, int chall_count, int chunk_count){
+        assert(chall_count > 0);
         ArrayList<Integer> challenges = new ArrayList<>();
-        BigInteger tmp = seed;
+        BigInteger tmp = new BigInteger(Hash.sha3(encode_packed(seed, block_id)));
         for (int i = 0; i < chall_count; i++) {
             tmp = new BigInteger(Hash.sha3(encode_packed(tmp, block_id)));
             challenges.add(tmp.mod(BigInteger.valueOf(chunk_count)).intValue());

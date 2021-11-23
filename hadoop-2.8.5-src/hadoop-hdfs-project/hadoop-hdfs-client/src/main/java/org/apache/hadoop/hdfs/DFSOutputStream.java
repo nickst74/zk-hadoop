@@ -940,7 +940,7 @@ public class DFSOutputStream extends FSOutputSummer
     long sleeptime = conf.getBlockWriteLocateFollowingInitialDelayMs();
     boolean fileComplete = false;
     int retries = conf.getNumBlockWriteLocateFollowingRetry();
-    this.dfsClient.getConnection().uploadHash(last.getBlockId(), getStreamer().root_hash);
+    this.dfsClient.getConnection().uploadHash(last.getBlockPoolId(), last.getBlockId(), getStreamer().root_hash);
     while (!fileComplete) {
       fileComplete =
           dfsClient.namenode.complete(src, dfsClient.clientName, last, fileId);

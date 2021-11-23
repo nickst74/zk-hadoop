@@ -1838,7 +1838,7 @@ class DataStreamer extends Daemon {
         try {
           if(oldBlock != null){
             // upload merkle root for last transmitted block
-            this.dfsClient.getConnection().uploadHash(oldBlock.getBlockId(), this.root_hash);
+            this.dfsClient.getConnection().uploadHash(oldBlock.getBlockPoolId(), oldBlock.getBlockId(), this.root_hash);
           }
           return dfsClient.namenode.addBlock(src, dfsClient.clientName,
               oldBlock, excluded, stat.getFileId(), favoredNodes,

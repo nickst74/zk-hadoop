@@ -16,7 +16,7 @@ library RNG {
     function gen_challenges(bytes memory _seed, uint _block_id, uint _bound, uint _count) internal pure returns (uint[] memory) {
         require(_count > 0);
         uint[] memory challenges = new uint[](_count);
-        uint tmp = uint(keccak256(abi.encodePacked(_seed, _block_id)));
+        uint tmp = uint(keccak256(abi.encodePacked(_block_id, _seed)));
         challenges[0] = tmp % _bound;
         for(uint i = 1; i < _count; i++){
             tmp = uint(keccak256(abi.encodePacked(tmp, _block_id)));
@@ -125,7 +125,7 @@ contract Data {
     }
     
     function dnode_init(string calldata _bp_id) external{
-        require(peek_seed(_bp_id).length != 0);
+        require(peek_seed(_bp_id).length == 0);
         bp_data[_bp_id].seeds[tx.origin] = RNG.gen_seed(_bp_id);
     }
 

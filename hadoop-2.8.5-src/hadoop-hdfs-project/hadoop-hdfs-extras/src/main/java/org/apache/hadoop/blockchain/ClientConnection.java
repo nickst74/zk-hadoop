@@ -36,9 +36,9 @@ public class ClientConnection extends Connection {
      * @param block_id Unique identifier of the block
      * @param root The merkle root hash of the block
      */
-    public void uploadHash(long block_id, byte[] root){
+    public void uploadHash(String bp_id, long block_id, byte[] root){
         System.out.println("Uploading hash for block: "+block_id+" -> 0x" + Util.bytesToHex(root));
-        CompletableFuture<TransactionReceipt> cf_tr = this.contract_wrapper.add_digest(BigInteger.valueOf(block_id), root).sendAsync();
+        CompletableFuture<TransactionReceipt> cf_tr = this.contract_wrapper.add_digest(bp_id, BigInteger.valueOf(block_id), root).sendAsync();
         this.txs.add(new TX(block_id, cf_tr));
     }
 

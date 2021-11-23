@@ -67,6 +67,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.merkle_trees.MerkleProof;
 import org.apache.hadoop.merkle_trees.Proof;
+import org.apache.hadoop.merkle_trees.Util;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
@@ -341,10 +342,10 @@ class BPServiceActor implements Runnable {
   // Initializes a merkle proof instance with the data and build merkle tree
   private final class MPTask implements Callable<MerkleProof> {
     private long block_id;
-    private BigInteger seed;
+    private byte[] seed;
     private int chunk_size, chunk_count, chall_count;
 
-    MPTask(long block_id, BigInteger seed, int chunk_size, int chunk_count, int chall_count) {
+    MPTask(long block_id, byte[] seed, int chunk_size, int chunk_count, int chall_count) {
       this.block_id = block_id;
       this.seed = seed;
       this.chunk_size = chunk_size;
@@ -414,7 +415,7 @@ class BPServiceActor implements Runnable {
               }
           }
           
-          dn.getCon().upload_proofs(block_ids, proofs);
+          dn.getCon().upload_proofs(bpos.getBlockPoolId(), block_ids, proofs);
         }
       } finally{
         // finally unluck the proof gen for the BlockPool
@@ -461,11 +462,11 @@ class BPServiceActor implements Runnable {
           List<FinalizedReplica> replicas = dn.getFSDataset().getFinalizedBlocks(bpos.getBlockPoolId());
           bpos.readUnlock();
           LOG.info("Found Finalized Replicas for upload : " + replicas.size());
-          BigInteger seed = dn.getCon().get_seed();
-          LOG.info("Got my seed : " + seed);
-          if(seed == null || seed.equals(BigInteger.valueOf(0))){
+          byte[] seed = dn.getCon().get_seed(bpos.getBlockPoolId());
+          LOG.info("Got my seed : " + Util.bytesToHex(seed));
+          if(seed == null || seed.length == 0){
             LOG.info("Initializing my seed");
-            dn.getCon().init_seed();
+            dn.getCon().init_seed(bpos.getBlockPoolId());
             LOG.info("Seed initialized, releasing lock. No upload at first block report.");
             bpos.proof_gen_in_progress.set(false);
           } else {
