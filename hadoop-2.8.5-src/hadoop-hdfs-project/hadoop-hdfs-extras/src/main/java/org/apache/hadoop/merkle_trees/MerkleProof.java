@@ -86,7 +86,8 @@ public class MerkleProof extends MerkleTree{
         assert(chall_count > 0);
         ArrayList<Integer> challenges = new ArrayList<>();
         BigInteger tmp = new BigInteger(Hash.sha3(encode_packed(seed, block_id)));
-        for (int i = 0; i < chall_count; i++) {
+        challenges.add(tmp.mod(BigInteger.valueOf(chunk_count)).intValue());
+        for (int i = 1; i < chall_count; i++) {
             tmp = new BigInteger(Hash.sha3(encode_packed(tmp, block_id)));
             challenges.add(tmp.mod(BigInteger.valueOf(chunk_count)).intValue());
         }
