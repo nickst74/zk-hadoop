@@ -161,6 +161,7 @@ public class JsonUtil {
     m.put("infoPort", datanodeinfo.getInfoPort());
     m.put("infoSecurePort", datanodeinfo.getInfoSecurePort());
     m.put("ipcPort", datanodeinfo.getIpcPort());
+    m.put("blockchainAddress", datanodeinfo.getBlockchainAddress());
 
     m.put("capacity", datanodeinfo.getCapacity());
     m.put("dfsUsed", datanodeinfo.getDfsUsed());

@@ -33,4 +33,8 @@ public class Connection {
             System.exit(1);
         }
     }
+
+    public String getAddress(){
+        return this.creds.getAddress();
+    }
 }

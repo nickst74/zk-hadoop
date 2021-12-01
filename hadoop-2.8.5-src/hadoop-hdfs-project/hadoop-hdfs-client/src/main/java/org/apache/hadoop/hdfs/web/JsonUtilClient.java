@@ -246,6 +246,7 @@ class JsonUtilClient {
         ((Number) m.get("infoPort")).intValue(),
         getInt(m, "infoSecurePort", 0),
         ((Number) m.get("ipcPort")).intValue(),
+        getString(m, "blockchainAddress", ""),
 
         getLong(m, "capacity", 0l),
         getLong(m, "dfsUsed", 0l),

@@ -311,6 +311,7 @@
       <th>Blocks</th>
       <th>Block pool used</th>
       <th>Version</th>
+      <th>BlockchainAddress</th>
     </tr>
   </thead>
   {#LiveNodes}
@@ -330,6 +331,7 @@
     <td title="Blocks Scheduled : {blockScheduled}">{numBlocks}</td>
     <td ng-value="{blockPoolUsedPercent}">{blockPoolUsed|fmt_bytes} ({blockPoolUsedPercent|fmt_percentage})</td>
     <td>{version}</td>
+    <td>{blockchainAddress}</td>
   </tr>
   {/LiveNodes}
   {#DeadNodes}
@@ -341,6 +343,7 @@
     <td></td>
     <td></td>
     <td></td>
+    <td>{blockchainAddress}</td>
   </tr>
   {/DeadNodes}
 </table>

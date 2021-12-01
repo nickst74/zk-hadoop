@@ -257,7 +257,9 @@ public class PBHelperClient {
             dn.getDatanodeUuid() : "")
         .setInfoPort(dn.getInfoPort())
         .setInfoSecurePort(dn.getInfoSecurePort())
-        .setIpcPort(dn.getIpcPort()).build();
+        .setIpcPort(dn.getIpcPort())
+        .setBlockchainAddress(dn.getBlockchainAddress() != null ?
+            dn.getBlockchainAddress() : "").build();
   }
 
   public static DatanodeInfoProto.AdminState convert(
@@ -593,7 +595,9 @@ public class PBHelperClient {
   public static DatanodeID convert(DatanodeIDProto dn) {
     return new DatanodeID(dn.getIpAddr(), dn.getHostName(),
         dn.getDatanodeUuid(), dn.getXferPort(), dn.getInfoPort(),
-        dn.hasInfoSecurePort() ? dn.getInfoSecurePort() : 0, dn.getIpcPort());
+        dn.hasInfoSecurePort() ? dn.getInfoSecurePort() : 0,
+        dn.getIpcPort(),
+        !dn.getBlockchainAddress().isEmpty() ? dn.getBlockchainAddress() : null);
   }
 
   public static AdminStates convert(AdminState adminState) {

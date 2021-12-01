@@ -49,6 +49,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
   private int infoSecurePort; // info server port
   private int ipcPort;       // IPC server port
   private String xferAddr;
+  private String blockchainAddress;
 
   /**
    * UUID identifying a given datanode. For upgraded Datanodes this is the
@@ -69,7 +70,8 @@ public class DatanodeID implements Comparable<DatanodeID> {
         from.getXferPort(),
         from.getInfoPort(),
         from.getInfoSecurePort(),
-        from.getIpcPort());
+        from.getIpcPort(),
+        from.getBlockchainAddress());
     this.peerHostName = from.getPeerHostName();
   }
 
@@ -86,13 +88,19 @@ public class DatanodeID implements Comparable<DatanodeID> {
    * @param ipcPort ipc server port
    */
   public DatanodeID(String ipAddr, String hostName, String datanodeUuid,
-      int xferPort, int infoPort, int infoSecurePort, int ipcPort) {
+      int xferPort, int infoPort, int infoSecurePort, int ipcPort, String blockchainAddress) {
     setIpAndXferPort(ipAddr, xferPort);
     this.hostName = hostName;
     this.datanodeUuid = checkDatanodeUuid(datanodeUuid);
     this.infoPort = infoPort;
     this.infoSecurePort = infoSecurePort;
     this.ipcPort = ipcPort;
+    this.blockchainAddress = blockchainAddress;
+  }
+
+  public DatanodeID(String ipAddr, String hostName, String datanodeUuid,
+      int xferPort, int infoPort, int infoSecurePort, int ipcPort) {
+    this(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort, ipcPort, null);
   }
 
   public void setIpAddr(String ipAddr) {
@@ -231,6 +239,13 @@ public class DatanodeID implements Comparable<DatanodeID> {
    */
   public int getIpcPort() {
     return ipcPort;
+  }
+
+  /**
+   * @return blockchainAddress (address used by the datanode to upload blockreports to the blockchain)
+   */
+  public String getBlockchainAddress() {
+      return blockchainAddress;
   }
 
   @Override

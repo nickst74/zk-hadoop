@@ -128,12 +128,26 @@ public class DatanodeInfo extends DatanodeID implements Node {
       final String upgradeDomain) {
     this(nodeID.getIpAddr(), nodeID.getHostName(), nodeID.getDatanodeUuid(),
         nodeID.getXferPort(), nodeID.getInfoPort(), nodeID.getInfoSecurePort(),
-        nodeID.getIpcPort(), capacity, dfsUsed, remaining, blockPoolUsed,
+        nodeID.getIpcPort(), nodeID.getBlockchainAddress(), capacity, dfsUsed, remaining, blockPoolUsed,
         cacheCapacity, cacheUsed, lastUpdate, lastUpdateMonotonic,
         xceiverCount, location, adminState, upgradeDomain);
   }
 
   /** Constructor */
+  public DatanodeInfo(final String ipAddr, final String hostName,
+      final String datanodeUuid, final int xferPort, final int infoPort,
+      final int infoSecurePort, final int ipcPort, String blockchainAddress,
+      final long capacity, final long dfsUsed, final long remaining,
+      final long blockPoolUsed, final long cacheCapacity, final long cacheUsed,
+      final long lastUpdate, final long lastUpdateMonotonic,
+      final int xceiverCount, final String networkLocation,
+      final AdminStates adminState) {
+    this(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
+        ipcPort, blockchainAddress, capacity, dfsUsed, remaining, blockPoolUsed, cacheCapacity,
+        cacheUsed, lastUpdate, lastUpdateMonotonic, xceiverCount,
+        networkLocation, adminState, null);
+  }
+  
   public DatanodeInfo(final String ipAddr, final String hostName,
       final String datanodeUuid, final int xferPort, final int infoPort,
       final int infoSecurePort, final int ipcPort,
@@ -143,12 +157,27 @@ public class DatanodeInfo extends DatanodeID implements Node {
       final int xceiverCount, final String networkLocation,
       final AdminStates adminState) {
     this(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
-        ipcPort, capacity, dfsUsed, remaining, blockPoolUsed, cacheCapacity,
+        ipcPort, null, capacity, dfsUsed, remaining, blockPoolUsed, cacheCapacity,
         cacheUsed, lastUpdate, lastUpdateMonotonic, xceiverCount,
         networkLocation, adminState, null);
   }
 
   /** Constructor */
+  public DatanodeInfo(final String ipAddr, final String hostName,
+      final String datanodeUuid, final int xferPort, final int infoPort,
+      final int infoSecurePort, final int ipcPort, String blockchainAddress,
+      final long capacity, final long dfsUsed, final long remaining,
+      final long blockPoolUsed, final long cacheCapacity, final long cacheUsed,
+      final long lastUpdate, final long lastUpdateMonotonic,
+      final int xceiverCount, final String networkLocation,
+      final AdminStates adminState,
+      final String upgradeDomain) {
+    this(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
+        ipcPort, blockchainAddress, capacity, dfsUsed, 0L, remaining, blockPoolUsed,
+        cacheCapacity, cacheUsed, lastUpdate, lastUpdateMonotonic,
+        xceiverCount, networkLocation, adminState, upgradeDomain);
+  }
+  
   public DatanodeInfo(final String ipAddr, final String hostName,
       final String datanodeUuid, final int xferPort, final int infoPort,
       final int infoSecurePort, final int ipcPort,
@@ -159,12 +188,37 @@ public class DatanodeInfo extends DatanodeID implements Node {
       final AdminStates adminState,
       final String upgradeDomain) {
     this(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
-        ipcPort, capacity, dfsUsed, 0L, remaining, blockPoolUsed,
+        ipcPort, null, capacity, dfsUsed, 0L, remaining, blockPoolUsed,
         cacheCapacity, cacheUsed, lastUpdate, lastUpdateMonotonic,
         xceiverCount, networkLocation, adminState, upgradeDomain);
   }
 
   /** Constructor. */
+  public DatanodeInfo(final String ipAddr, final String hostName,
+      final String datanodeUuid, final int xferPort, final int infoPort,
+      final int infoSecurePort, final int ipcPort, String blockchainAddress, final long capacity,
+      final long dfsUsed, final long nonDfsUsed, final long remaining,
+      final long blockPoolUsed, final long cacheCapacity, final long cacheUsed,
+      final long lastUpdate, final long lastUpdateMonotonic,
+      final int xceiverCount, final String networkLocation,
+      final AdminStates adminState, final String upgradeDomain) {
+    super(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
+        ipcPort, blockchainAddress);
+    this.capacity = capacity;
+    this.dfsUsed = dfsUsed;
+    this.nonDfsUsed = nonDfsUsed;
+    this.remaining = remaining;
+    this.blockPoolUsed = blockPoolUsed;
+    this.cacheCapacity = cacheCapacity;
+    this.cacheUsed = cacheUsed;
+    this.lastUpdate = lastUpdate;
+    this.lastUpdateMonotonic = lastUpdateMonotonic;
+    this.xceiverCount = xceiverCount;
+    this.location = networkLocation;
+    this.adminState = adminState;
+    this.upgradeDomain = upgradeDomain;
+  }
+  
   public DatanodeInfo(final String ipAddr, final String hostName,
       final String datanodeUuid, final int xferPort, final int infoPort,
       final int infoSecurePort, final int ipcPort, final long capacity,
@@ -174,7 +228,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
       final int xceiverCount, final String networkLocation,
       final AdminStates adminState, final String upgradeDomain) {
     super(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
-        ipcPort);
+        ipcPort, null);
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
     this.nonDfsUsed = nonDfsUsed;

@@ -315,7 +315,9 @@
     $.get(
       '/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo',
       guard_with_startup_progress(function (resp) {
+        console.log(resp);
         var data = workaround(resp.beans[0]);
+        console.log(data);
         var base = dust.makeBase(HELPERS);
         dust.render('datanode-info', base.push(data), function(err, out) {
           $('#tab-datanode').html(out);
@@ -328,7 +330,8 @@
               { 'orderDataType': 'ng-value', 'type': 'num' },
               { 'type': 'num' },
               { 'orderDataType': 'ng-value', 'type': 'num'},
-              { 'type': 'string' }
+              { 'type': 'string' },
+              { 'type': 'string', 'searchable': true }
             ]});
           renderHistogram(data);
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
