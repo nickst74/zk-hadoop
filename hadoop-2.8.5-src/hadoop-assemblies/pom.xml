@@ -48,7 +48,7 @@
               <version>${enforced.maven.version}</version>
             </requireMavenVersion>
             <requireJavaVersion>
-              <version>1.8</version>
+              <version>${enforced.java.version}</version>
             </requireJavaVersion>
           </rules>
         </configuration>

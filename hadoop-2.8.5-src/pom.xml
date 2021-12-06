@@ -91,12 +91,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!-- maven plugin versions -->
-    <maven.compiler.target>1.8</maven.compiler.target>
-    <maven.compiler.source>1.8</maven.compiler.source>
     <maven-deploy-plugin.version>2.8.1</maven-deploy-plugin.version>
     <maven-site-plugin.version>3.5</maven-site-plugin.version>
     <maven-stylus-skin.version>1.5</maven-stylus-skin.version>
-    <maven-antrun-plugin.version>1.8</maven-antrun-plugin.version>
+    <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
     <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
     <maven-dependency-plugin.version>2.8</maven-dependency-plugin.version>
     <maven-enforcer-plugin.version>1.3.1</maven-enforcer-plugin.version>
@@ -139,15 +137,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
-        <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
-        </configuration>
-      </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
           <version>${maven-enforcer-plugin.version}</version>
           <configuration>
@@ -156,7 +145,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                 <version>[3.0.2,)</version>
               </requireMavenVersion>
               <requireJavaVersion>
-                <version>[1.8,)</version>
+                <version>[1.7,)</version>
               </requireJavaVersion>
             </rules>
           </configuration>
@@ -329,12 +318,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
           <reportSet>
             <id>aggregate</id>
             <configuration>
-              <testSource>1.8</testSource>
-              <testTarget>1.8</testTarget>
               <maxmemory>1024m</maxmemory>
               <quiet>true</quiet>
               <verbose>false</verbose>
-              <source>1.8</source>
+              <source>${maven.compile.source}</source>
               <charset>${maven.compile.encoding}</charset>
               <reportOutputDirectory>${project.build.directory}/site</reportOutputDirectory>
               <destDir>hadoop-project/api</destDir>

@@ -93,7 +93,7 @@
        [${javac.version})
     for an open-ended enforcement
     -->
-    <enforced.java.version>${javac.version}</enforced.java.version>
+    <enforced.java.version>[${javac.version},)</enforced.java.version>
     <enforced.maven.version>[3.0.2,)</enforced.maven.version>
 
     <!-- Plugin versions and config -->
@@ -172,6 +172,11 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdfs-client</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs-extras</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -987,6 +992,26 @@
        <scope>test</scope>
      </dependency>
      <dependency>
+       <groupId>org.bouncycastle</groupId>
+       <artifactId>bcprov-jdk15on</artifactId>
+       <version>1.65</version>
+     </dependency>
+     <dependency>
+     	<groupId>com.squareup.okio</groupId>
+     	<artifactId>okio</artifactId>
+     	<version>2.4.1</version>
+     </dependency>
+  	 <dependency>
+  		<groupId>org.jetbrains.kotlin</groupId>
+  		<artifactId>kotlin-stdlib</artifactId>
+  		<version>1.3.61</version>
+  	 </dependency>
+  	 <dependency>
+  		<groupId>org.jetbrains.kotlin</groupId>
+  		<artifactId>kotlin-stdlib-common</artifactId>
+  		<version>1.3.61</version>
+  	 </dependency>
+     <dependency>
         <groupId>com.microsoft.azure</groupId>
         <artifactId>azure-storage</artifactId>
         <version>2.2.0</version>
@@ -1034,8 +1059,8 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>${maven-compiler-plugin.version}</version>
           <configuration>
-            <source>1.8</source>
-            <target>1.8</target>
+            <source>${javac.version}</source>
+            <target>${javac.version}</target>
             <useIncrementalCompilation>false</useIncrementalCompilation>
           </configuration>
         </plugin>
@@ -1192,7 +1217,7 @@
               <version>[3.0.0,)</version>
             </requireMavenVersion>
             <requireJavaVersion>
-              <version>${javac.version}</version>
+              <version>1.6</version>
             </requireJavaVersion>
           </rules>
         </configuration>
@@ -1357,8 +1382,8 @@
             <artifactId>maven-compiler-plugin</artifactId>
             <configuration>
               <fork>true</fork>
-              <source>1.8</source>
-              <target>1.8</target>
+              <source>${javac.version}</source>
+              <target>${javac.version}</target>
               <compilerArguments>
                 <Xlint/>
                 <Xmaxwarns>9999</Xmaxwarns>

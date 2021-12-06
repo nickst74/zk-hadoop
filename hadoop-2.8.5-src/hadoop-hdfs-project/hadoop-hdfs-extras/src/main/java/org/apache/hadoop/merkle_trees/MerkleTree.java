@@ -1,9 +1,5 @@
 package org.apache.hadoop.merkle_trees;
 
-//import java.math.BigInteger;
-//import java.nio.file.Files;
-//import java.nio.file.Paths;
-//import java.util.List;
 import java.util.ArrayList;
 
 /**
@@ -119,24 +115,4 @@ public class MerkleTree{
         return this.root.getHash();
     }
 
-/*
-    public static void main( String[] args )
-    {
-        try {    
-            byte[] d = Files.readAllBytes(Paths.get("/home/nick/Desktop/zok_test/empty.txt"));
-            //System.out.println(d.length);
-            MerkleProof tr = new MerkleProof(d, Config.CHUNK_SIZE, Config.CHUNK_COUNT, BigInteger.valueOf(1092L), BigInteger.valueOf(1));
-            tr.build();
-            byte[] result = tr.getRoot();
-            System.out.println(Util.bytesToHex(result));
-            for (int i = 0; i < result.length; i+=4) {
-                System.out.print(Long.toString(Util.bytesToLong(result, i))+" ");
-            }
-            System.out.println();
-            //Proof proof = tr.produce_proof_single(33187);
-            List<Proof> proofs = tr.produce_proofs(2);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }*/
 }

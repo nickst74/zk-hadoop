@@ -101,7 +101,7 @@
           <maxmemory>512m</maxmemory>
           <quiet>true</quiet>
           <verbose>false</verbose>
-          <source>1.8</source>
+          <source>${maven.compile.source}</source>
           <charset>${maven.compile.encoding}</charset>
           <reportOutputDirectory>${project.build.directory}/site</reportOutputDirectory>
           <destDir>api</destDir>
