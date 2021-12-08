@@ -1,6 +1,12 @@
 package org.apache.hadoop.merkle_trees;
 
+import java.math.BigInteger;
+
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
+import org.web3j.crypto.Hash;
 
 /**
  * Representation of a classic Merkle Tree created
@@ -11,6 +17,7 @@ public class MerkleTree{
 
     protected Node root;
     protected ArrayList<Node> leaves;
+    private ArrayList<byte[]> chunks;
 
     protected class Node{
         private byte[] hash;
@@ -57,7 +64,7 @@ public class MerkleTree{
 
     /**
      * Fill all the leaves with correpsonding chunks' hashes.
-     * Chunks are formeds from repeating the sequence of bytes of the given block.
+     * Chunks are formed from repeating the sequence of bytes of the given block.
      * @param block The raw data
      * @param chunk_size The size of each chunk in bytes
      * @param chunk_count The number of chunks in which the data is split
@@ -70,6 +77,7 @@ public class MerkleTree{
             block = new byte[chunk_size];
         }
         // init fields
+        this.chunks = new ArrayList<byte[]>();
         this.leaves = new ArrayList<Node>();
         this.root = null;
         // fill chunk and compute hash
@@ -86,12 +94,9 @@ public class MerkleTree{
                     block_index = 0;
                 }
             }
+            this.chunks.add(current_chunk);
             this.leaves.add(new Node(current_chunk));
         }
-    }
-
-    protected MerkleTree(){
-        /* nothing */
     }
 
     /**
@@ -113,6 +118,54 @@ public class MerkleTree{
 
     public byte[] getRoot() {
         return this.root.getHash();
+    }
+    
+    public byte[] getChunk(int i) {
+    	return this.chunks.get(i);
+    }
+    
+    public Pair<List<Boolean>, List<byte[]>> getPath(int i) {
+    	ArrayList<Boolean> path = new ArrayList<>();
+    	ArrayList<byte[]> siblings = new ArrayList<>();
+    	Node prev, current = this.leaves.get(i);
+    	while(current != this.root) {
+    		prev = current;
+    		current = current.getParent();
+    		if(current.left == prev) {
+    			path.add(false);
+    			siblings.add(current.getRight().getHash());
+    		} else {
+    			path.add(true);
+    			siblings.add(current.getLeft().getHash());
+    		}
+    	}
+    	return new Pair<>(path, siblings);
+    }    
+    
+    private LinkedList<Integer> gen_challenges(byte[] seed, BigInteger block_id, int chall_count){
+        assert(chall_count > 0);
+        LinkedList<Integer> challenges = new LinkedList<>();
+        BigInteger tmp = new BigInteger(Hash.sha3(Util.encode_packed(seed, block_id)));
+        challenges.add(tmp.mod(BigInteger.valueOf(this.chunks.size())).intValue());
+        for (int i = 1; i < chall_count; i++) {
+            tmp = new BigInteger(Hash.sha3(Util.encode_packed(tmp, block_id)));
+            challenges.add(tmp.mod(BigInteger.valueOf(this.chunks.size())).intValue());
+        }
+        return challenges;
+    }
+    
+    public MerkleProof getMerkleProof(long block_id, byte[] seed, int chall_count) {
+    	LinkedList<Integer> challenges = gen_challenges(seed, BigInteger.valueOf(block_id), chall_count);
+    	LinkedList<byte[]> chunks = new LinkedList<>();
+    	LinkedList<List<Boolean>> paths = new LinkedList<>();
+    	LinkedList<List<byte[]>> siblings = new LinkedList<>();
+    	for(int i : challenges) {
+    		chunks.add(getChunk(i));
+    		Pair<List<Boolean>, List<byte[]>> p = getPath(i);
+    		paths.add(p.getFirst());
+    		siblings.add(p.getSecond());
+    	}
+    	return new MerkleProof(block_id, getRoot(), challenges, chunks, siblings, paths);
     }
 
 }

@@ -21,12 +21,15 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.Closeable;
 import java.io.EOFException;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -34,11 +37,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -66,12 +71,16 @@ import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.merkle_trees.MerkleProof;
-import org.apache.hadoop.merkle_trees.Proof;
+import org.apache.hadoop.merkle_trees.MerkleTree;
 import org.apache.hadoop.merkle_trees.Util;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -127,6 +136,8 @@ class BPServiceActor implements Runnable {
       = new LinkedList<BPServiceActorAction>();
 
   private long fullBlockReportLeaseId = 0;
+  // just a lock for thread safety in zokrates directory
+  private static ReentrantLock zok_lock = new ReentrantLock();
 
   BPServiceActor(InetSocketAddress nnAddr, InetSocketAddress lifelineNnAddr,
       BPOfferService bpos) {
@@ -339,7 +350,11 @@ class BPServiceActor implements Runnable {
     return prevBlockReportId;
   }
   
-  // Initializes a merkle proof instance with the data and build merkle tree
+  /**
+   * Reads block from FileSystem, and builds the MerkleTree.
+   * The it returns all data required to produce the zk-proofs.
+   * @return The MerkleProof struct for the given block
+   */
   private final class MPTask implements Callable<MerkleProof> {
     private long block_id;
     private byte[] seed;
@@ -358,71 +373,132 @@ class BPServiceActor implements Runnable {
       // Read block from filesystem
       ExtendedBlock eb;
       try {
-        eb = new ExtendedBlock(bpos.getBlockPoolId(),
-                                              dn.data.getStoredBlock(bpos.getBlockPoolId(), block_id));
+        eb = new ExtendedBlock(bpos.getBlockPoolId(), dn.data.getStoredBlock(bpos.getBlockPoolId(), block_id));
         InputStream in_stream = dn.data.getBlockInputStream(eb, 0);
         byte[] buffer = new byte[(int) dn.data.getLength(eb)];
         IOUtils.readFully(in_stream, buffer, 0, buffer.length);
-        // create initialize MerkleProof and build the merkle tree
-        MerkleProof mp = new MerkleProof(buffer, chunk_size, chunk_count, BigInteger.valueOf(block_id), seed, chall_count);
-        mp.build();
+        // Initialize and build MerkleTree
+        MerkleTree tree = new MerkleTree(buffer, this.chunk_size, this.chunk_count);
+        tree.build();
         // return MerkleProof for proof generation phase
-        return mp;
+        return tree.getMerkleProof(this.block_id, this.seed, this.chall_count);
       } catch(IOException e){
         // if it fails, just return null so we can discard it later
         return null;
       }
     }
-
+    
   }
-
+  
+  /*
+   * Uses ZoKrates to produce the zk-proofs, and submits them to the smart contract.
+   */
   class ProofGenT implements Runnable {
-    private List<MerkleProof> mps;
+	  
+	  List<MerkleProof> mproofs;
+	  
+	  public ProofGenT(List<Future<MerkleProof>> fmps) {
+		  this.mproofs = new ArrayList<>();
+		  for(Future<MerkleProof> fmp : fmps) {
+			  try {
+				  MerkleProof mp = fmp.get();
+				  if(mp != null) {
+					  this.mproofs.add(mp);
+				  }
+			  } catch (InterruptedException | ExecutionException e) {
+				  /* Just ignore the entry */
+			}
+		  }
+	  }
+	  
+	  private BigInteger objToBigInt(Object obj) {
+		  String string = (String) obj;
+		  // get rid of '0x' prefix
+		  return new BigInteger(string.substring(2), 16);
+	  }
 
-    public ProofGenT(List<Future<MerkleProof>> fmps){
-      this.mps = new ArrayList<MerkleProof>();
-      for (Future<MerkleProof> fmp : fmps) {
-        try {
-          MerkleProof mp = fmp.get();
-          if(mp != null){
-            this.mps.add(mp);
-          }
-        } catch (Exception e) {
-          // just skip if it failed
-        }
-      }
-      LOG.info("I have MerkleProof valid instances total -> "+mps.size());
-    }
-
-    @Override
-    public void run() {
-      try{
-        // for all challenges generate the proofs
-        List<BigInteger> block_ids = new ArrayList<>();
-        List<List<Proof>> proofs = new ArrayList<>();
-        for (MerkleProof mp : this.mps) {
-          block_ids.add(mp.getBlock_id());
-          LOG.info("Generating proofs for BlockPool-BlockId: "+bpos.getBlockPoolId()+"-"+mp.getBlock_id());
-          proofs.add(mp.produce_proofs(dn.getConf().get(DFS_ZOKRATES_DIR_PATH_KEY)));
-        }
-        if (!block_ids.isEmpty()) {
-          // upload the proofs and wait for the result
-          LOG.info("Uploading block report to blockchain for BlockPool: "+bpos.getBlockPoolId());
-          for (int i = 0; i < block_ids.size(); i++) {
-              LOG.info("Proof for BlockId: "+block_ids.get(i));
-              for (int j = 0; j < proofs.get(i).size(); j++) {
-                LOG.info("Proof "+j+":\n"+proofs.get(i).get(j).a[0]+"\n"+proofs.get(i).get(j).a[1]+"\n"+proofs.get(i).get(j).b[0][0]+"\n"+proofs.get(i).get(j).b[0][1]+"\n"+proofs.get(i).get(j).b[1][0]+"\n"+proofs.get(i).get(j).b[1][1]+"\n"+proofs.get(i).get(j).c[0]+"\n"+proofs.get(i).get(j).c[1]);
-              }
-          }
-          
-          dn.getCon().upload_proofs(bpos.getBlockPoolId(), block_ids, proofs);
-        }
-      } finally{
-        // finally unluck the proof gen for the BlockPool
-        LOG.info("Releasing lock");
-        bpos.proof_gen_in_progress.set(false);
-      }
-    }
+	  @Override
+	  public void run() {
+		  if(this.mproofs.isEmpty()) {
+			  LOG.info("Nothing to report. Releasing proof_gen_lock.");
+			  bpos.proof_gen_in_progress.set(false);
+			  return;
+		  }
+		  List<BigInteger> block_ids = new ArrayList<>();
+		  List<BigInteger> as = new ArrayList<>();
+		  List<BigInteger> bs1 = new ArrayList<>();
+		  List<BigInteger> bs2 = new ArrayList<>();
+		  List<BigInteger> cs = new ArrayList<>();
+		  String zok_dir = dn.getConf().get(DFS_ZOKRATES_DIR_PATH_KEY);
+		  
+		  ProcessBuilder pb = new ProcessBuilder();
+		  pb.directory(new File(zok_dir));
+		  
+		  
+		  // grab zok_lock before starting the proof gen
+		  zok_lock.lock();
+		  for (MerkleProof mp : this.mproofs) {
+			  block_ids.add(BigInteger.valueOf(mp.getBlock_id()));
+			  while(!mp.isEmpty()) {
+				  try {
+					  pb.command(mp.nextWitness());
+					  Process pr = pb.start();
+					  pr.waitFor();
+					  pb.command("./zokrates", "generate-proof");
+					  pr = pb.start();
+					  pr.waitFor();
+					  JSONParser parser = new JSONParser();
+					  JSONObject obj = (JSONObject) ((JSONObject) parser.parse(new FileReader(zok_dir+"/proof.json"))).get("proof");
+					  JSONArray arr_a = (JSONArray) obj.get("a");
+					  JSONArray arr_b = (JSONArray) obj.get("b");
+					  JSONArray arr_c = (JSONArray) obj.get("c");
+					  JSONArray arr_b1 = (JSONArray) arr_b.get(0);
+					  JSONArray arr_b2 = (JSONArray) arr_b.get(1);
+					  as.add(objToBigInt(arr_a.get(0)));
+					  as.add(objToBigInt(arr_a.get(1)));
+					  bs1.add(objToBigInt(arr_b1.get(0)));
+					  bs1.add(objToBigInt(arr_b1.get(1)));
+					  bs2.add(objToBigInt(arr_b2.get(0)));
+					  bs2.add(objToBigInt(arr_b2.get(1)));
+					  cs.add(objToBigInt(arr_c.get(0)));
+					  cs.add(objToBigInt(arr_c.get(1)));
+					  //LOG.info("Proof for "+mp.getBlock_id()+"\n"+arr_a.get(0)+arr_a.get(1));
+					  
+				  } catch (Exception e) {
+					  LOG.warn(e.getMessage());
+					  // if exception is thrown just skip all the next
+					  // and fill the next challenges with dummy numbers
+					  // because it will fail anyway
+					  List<BigInteger> dummy = Arrays.asList(BigInteger.valueOf(0), BigInteger.valueOf(0));
+					  as.addAll(dummy);
+					  bs1.addAll(dummy);
+					  bs2.addAll(dummy);
+					  cs.addAll(dummy);
+					  while(!mp.isEmpty()) {
+						  mp.skip();
+						  as.addAll(dummy);
+						  bs1.addAll(dummy);
+						  bs2.addAll(dummy);
+						  cs.addAll(dummy);
+					  }
+				  }
+			  }
+		  }
+		  
+		  zok_lock.unlock();
+		  
+		  // upload block report to smart contracts
+		  try {
+			  String status = dn.getCon().upload_proofs(bpos.getBlockPoolId(), block_ids, as, bs1, bs2, cs);
+			  LOG.info("BlockReport on chain returned with status -> "+status);
+		  } catch (Exception e) {
+			  LOG.warn("Exception during on-chain BlockReport: "+e.getMessage());
+		  } finally {
+			  // at last release the proof_gen_lock of the blockpool
+			  LOG.info("Releasing proof_gen_lock");
+			  bpos.proof_gen_in_progress.set(false);
+		  }
+	  }
   }
 
 
@@ -440,6 +516,7 @@ class BPServiceActor implements Runnable {
     
     @Override
     public void run() {
+      boolean have_lock = false;
       try {
         LOG.info("Started block report Thread for BlockPool: "+bpos.getBlockPoolId());
         final ArrayList<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>();
@@ -452,51 +529,52 @@ class BPServiceActor implements Runnable {
             bpos.getBlockPoolId(), dn.getMetrics());
 
         long brCreateStartTime = monotonicNow();
+        List<FinalizedReplica> replicas = null;
         // just keep the readlock only until you get both lists of replicas
         LOG.info("Reading Filesystem metadata while holding the lock. I handle Active NN? -> "+ upload_br);
         bpos.readLock();
         Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
             dn.getFSDataset().getBlockReports(bpos.getBlockPoolId());
         if(upload_br && bpos.proof_gen_in_progress.compareAndSet(false, true)){
+          have_lock = true;
           LOG.info("Grabbed the proof gen lock");
-          List<FinalizedReplica> replicas = dn.getFSDataset().getFinalizedBlocks(bpos.getBlockPoolId());
-          bpos.readUnlock();
-          LOG.info("Found Finalized Replicas for upload : " + replicas.size());
-          byte[] seed = dn.getCon().get_seed(bpos.getBlockPoolId());
-          LOG.info("Got my seed : " + Util.bytesToHex(seed));
-          if(seed == null || seed.length == 0){
-            LOG.info("Initializing my seed");
-            dn.getCon().init_seed(bpos.getBlockPoolId());
-            LOG.info("Seed initialized, releasing lock. No upload at first block report.");
-            bpos.proof_gen_in_progress.set(false);
-          } else {
-            Collection<Callable<MerkleProof>> tasks = new ArrayList<>();
-            for(FinalizedReplica replica : replicas){
-              tasks.add(new MPTask(replica.getBlockId(),
-                                  seed,
-                                  dn.getConf().getInt(DFS_CHUNK_SIZE_KEY, DFS_CHUNK_SIZE_DEFAULT),
-                                  (int) dn.getConf().getLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT)/dn.getConf().getInt(DFS_CHUNK_SIZE_KEY, DFS_CHUNK_SIZE_DEFAULT),
-                                  dn.getConf().getInt(DFS_CHALLENGE_COUNT_KEY, DFS_CHALLENGE_COUNT_DEFAULT)));
-            }
-            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-            try {
-              LOG.info("Starting parallel merkle proof init");
-              List<Future<MerkleProof>> future_mps = executor.invokeAll(tasks);
-              // after all threads have finished, start a new thread to produce and submit proofs on bloackchain
-              ProofGenT pgt = new ProofGenT(future_mps);
-              executor.shutdown();
-              LOG.info("Starting proof gen Thread");
-              new Thread(pgt).start();
-            } catch (Exception e) {
-              // if it gets interrrupted, just abort and release lock
-              LOG.info("Something went wrong, releasing proof lock");
-              bpos.proof_gen_in_progress.set(false);
-            }
-          }
-        } else {
-          bpos.readUnlock();
+          replicas = dn.getFSDataset().getFinalizedBlocks(bpos.getBlockPoolId());
         }
-
+        bpos.readUnlock();
+        if(have_lock) {
+        	LOG.info("Found Finalized Replicas for upload : " + replicas.size());
+        	try {
+        		byte[] seed = dn.getCon().get_seed(bpos.getBlockPoolId());
+        		LOG.info("Got my seed : " + Util.bytesToHex(seed));
+        		if(seed.length == 0) {
+        			LOG.info("Initializing my seed");
+                    dn.getCon().init_seed(bpos.getBlockPoolId());
+                    LOG.info("Seed initialized, releasing lock. No upload at first block report.");
+                    bpos.proof_gen_in_progress.set(false);
+        		} else {
+        			Collection<Callable<MerkleProof>> tasks = new ArrayList<>();
+                    for(FinalizedReplica replica : replicas){
+                      tasks.add(new MPTask(replica.getBlockId(),
+                                          seed,
+                                          dn.getConf().getInt(DFS_CHUNK_SIZE_KEY, DFS_CHUNK_SIZE_DEFAULT),
+                                          (int) dn.getConf().getLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT)/dn.getConf().getInt(DFS_CHUNK_SIZE_KEY, DFS_CHUNK_SIZE_DEFAULT),
+                                          dn.getConf().getInt(DFS_CHALLENGE_COUNT_KEY, DFS_CHALLENGE_COUNT_DEFAULT)));
+                    }
+                    ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());LOG.info("Starting parallel merkle proof init");
+                    List<Future<MerkleProof>> future_mps = executor.invokeAll(tasks);
+                    // after all threads have finished, start a new thread to produce and submit zk-proofs on blockchain
+                    ProofGenT pgt = new ProofGenT(future_mps);
+                    executor.shutdown();
+                    LOG.info("Starting proof gen Thread");
+                    new Thread(pgt).start();
+				}
+        	} catch (Exception e) {
+        		// if an exception is thrown, just abort and release lock
+        		// also log the exception message (just for debugging)
+        		LOG.info("Aborting on-chain report and releasing proof_gen_lock: "+e.getMessage());
+        		bpos.proof_gen_in_progress.set(false);
+        	}
+        }
 
         // Convert the reports to the format expected by the NN.
         int i = 0;

@@ -59,10 +59,5 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     	<artifactId>junit</artifactId>
     	<scope>test</scope>
     </dependency>
-  	<!-- https://mvnrepository.com/artifact/com.googlecode.json-simple/json-simple -->
-    <dependency>
-  		<groupId>com.googlecode.json-simple</groupId>
-  		<artifactId>json-simple</artifactId>
-  	</dependency>
   </dependencies>
 </project>

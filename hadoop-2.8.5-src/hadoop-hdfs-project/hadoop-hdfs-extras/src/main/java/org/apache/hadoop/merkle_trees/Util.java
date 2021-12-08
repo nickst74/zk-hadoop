@@ -1,5 +1,6 @@
 package org.apache.hadoop.merkle_trees;
 
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 
 public class Util {
@@ -64,6 +65,22 @@ public class Util {
         System.arraycopy(a, 0, result, 0, a.length);
         System.arraycopy(b, 0, result, a.length, b.length);
         return result;
+    }
+    
+    public static byte[] encode_packed(byte[] a, BigInteger _b){
+        byte[] ret = new byte[32+a.length];
+        byte[] b = _b.toByteArray();
+        System.arraycopy(b, 0, ret, 32 - b.length, b.length);
+        System.arraycopy(a, 0, ret, ret.length - a.length, a.length);
+        return ret;
+    }
+
+    public static byte[] encode_packed(BigInteger _a, BigInteger _b){
+        byte[] ret = new byte[64];
+        byte[] a = _a.toByteArray(), b = _b.toByteArray();
+        System.arraycopy(a, 0, ret, 32 - a.length, a.length);
+        System.arraycopy(b, 0, ret, 64 - b.length, b.length);
+        return ret;
     }
 
 }
