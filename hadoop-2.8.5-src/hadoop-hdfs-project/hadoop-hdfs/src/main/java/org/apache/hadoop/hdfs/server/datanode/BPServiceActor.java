@@ -500,6 +500,27 @@ class BPServiceActor implements Runnable {
 		  }
 	  }
   }
+  
+  
+  /**
+   * Asynchronously generate a seed and wait until it is done
+   * Only called once for every datanode-blockpool, but is done
+   * on separate thread so it does not stall the block report process.
+   */
+  class SeedInitT implements Runnable {
+	  @Override
+	  public void run() {
+	  	try {
+	  		LOG.info("Initializing my seed");
+        dn.getCon().init_seed(bpos.getBlockPoolId());
+        LOG.info("Seed initialized, releasing lock. No upload at first block report.");
+			} catch (Exception e) {
+				LOG.warn("Exception thrown while generating seed: "+e.getMessage());
+			} finally {
+        bpos.proof_gen_in_progress.set(false);
+			}
+	  }
+  }
 
 
   /**
@@ -547,10 +568,8 @@ class BPServiceActor implements Runnable {
         		byte[] seed = dn.getCon().get_seed(bpos.getBlockPoolId());
         		LOG.info("Got my seed : " + Util.bytesToHex(seed));
         		if(seed.length == 0) {
-        			LOG.info("Initializing my seed");
-                    dn.getCon().init_seed(bpos.getBlockPoolId());
-                    LOG.info("Seed initialized, releasing lock. No upload at first block report.");
-                    bpos.proof_gen_in_progress.set(false);
+        			// first time running block report for this blockpool, generating seed
+        			new Thread(new SeedInitT()).run();        			
         		} else {
         			Collection<Callable<MerkleProof>> tasks = new ArrayList<>();
                     for(FinalizedReplica replica : replicas){
