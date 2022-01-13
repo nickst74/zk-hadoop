@@ -100,7 +100,6 @@ contract Data {
         bytes memory seed = abi.encodePacked(bp_pointer.seeds[tx.origin], _proofs.bp_id, tx.origin);
         // for every blockID check the proofs
         for(uint i = 0; i < _proofs.block_ids.length; i++) {
-            results[i] = true;
             uint[] memory challenges = gen_challenges(seed, _proofs.block_ids[i], num_chunks, num_chall);
             uint[10] memory input = get_input_vector(bp_pointer.roots[_proofs.block_ids[i]]);
             for(uint j = 0; j < num_chall; j++) {
