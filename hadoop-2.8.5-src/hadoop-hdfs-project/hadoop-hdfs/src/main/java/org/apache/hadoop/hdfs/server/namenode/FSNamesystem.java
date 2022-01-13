@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.commons.lang.StringEscapeUtils.escapeJava;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BLOCKCHAIN_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CONTRACT_ADDRESS_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
@@ -556,6 +558,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private INodeAttributeProvider inodeAttributeProvider;
 
   private String nameNodeHostName = null;
+  
+  private String gethAddress = null;
+  private String contractAddress = null;
 
   /**
    * Notify that loading of this FSDirectory is complete, and
@@ -755,6 +760,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
           DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
 
+      this.gethAddress = conf.get(DFS_BLOCKCHAIN_ADDRESS_KEY);
+      this.contractAddress = conf.get(DFS_CONTRACT_ADDRESS_KEY);
       this.blockManager = new BlockManager(this, conf);
       this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
       this.blockIdManager = new BlockIdManager(blockManager);
@@ -6114,6 +6121,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Class representing Namenode information for JMX interfaces
    */
+  @Override // NamenodeMXBean
+  public String getGethAddress() {
+  	return this.gethAddress;
+  }
+  
+  @Override // NamenodeMXBean
+  public String getContractAddress() {
+  	return this.contractAddress;
+  }
+  
   @Override // NameNodeMXBean
   public String getVersion() {
     return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();

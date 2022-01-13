@@ -31,6 +31,20 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public interface NameNodeMXBean {
+	
+	/**
+	 * Get the address of the geth node
+	 * 
+	 * @return the geth node address
+	 */
+	public String getGethAddress();
+	
+	/**
+	 * Get the address of the deployed smart contract
+	 * 
+	 * @return the smart contract address
+	 */
+	public String getContractAddress();
 
   /**
    * Gets the version of Hadoop.
