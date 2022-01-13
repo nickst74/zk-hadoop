@@ -5,6 +5,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.web3j.crypto.Hash;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
 import org.apache.hadoop.merkle_trees.Util;
@@ -38,7 +39,7 @@ public class ClientConnection extends Connection {
      */
     public void uploadHash(String bp_id, long block_id, byte[] root){
         System.out.println("Uploading hash for block: "+block_id+" -> 0x" + Util.bytesToHex(root));
-        CompletableFuture<TransactionReceipt> cf_tr = this.contract_wrapper.add_digest(bp_id, BigInteger.valueOf(block_id), root).sendAsync();
+        CompletableFuture<TransactionReceipt> cf_tr = this.contract_wrapper.add_digest(Hash.sha3(bp_id.getBytes()), BigInteger.valueOf(block_id), root).sendAsync();
         this.txs.add(new TX(block_id, cf_tr));
     }
 

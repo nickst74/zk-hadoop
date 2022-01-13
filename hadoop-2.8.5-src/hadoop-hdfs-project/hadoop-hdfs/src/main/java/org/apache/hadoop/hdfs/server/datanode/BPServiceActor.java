@@ -86,6 +86,8 @@ import org.slf4j.Logger;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 
+import jnr.ffi.Struct.int16_t;
+
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHUNK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHUNK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHALLENGE_COUNT_KEY;
@@ -535,6 +537,14 @@ class BPServiceActor implements Runnable {
       this.upload_br = upload_br;
     }
     
+    private boolean seedIsValid(final byte[] seed) {
+    	int result = 0;
+    	for(int i = 0; i < 32; i++) {
+    		result |= seed[i];
+    	}
+    	return result != 0;
+    }
+    
     @Override
     public void run() {
       boolean have_lock = false;
@@ -567,7 +577,7 @@ class BPServiceActor implements Runnable {
         	try {
         		byte[] seed = dn.getCon().get_seed(bpos.getBlockPoolId());
         		LOG.info("Got my seed : " + Util.bytesToHex(seed));
-        		if(seed.length == 0) {
+        		if(!seedIsValid(seed)) {
         			// first time running block report for this blockpool, generating seed
         			new Thread(new SeedInitT()).run();        			
         		} else {
