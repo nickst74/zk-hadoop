@@ -1,0 +1,123 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+  -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=9" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap-editable.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/css/bootstrap-datetimepicker.min.css" />
+    <!-- graph resources -->
+    <script src="https://cdn.amcharts.com/lib/4/core.js"></script>
+    <script src="https://cdn.amcharts.com/lib/4/charts.js"></script>
+    <script src="https://cdn.amcharts.com/lib/4/themes/animated.js"></script>
+    <!-- Web3 resource -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <!-- My styling file -->
+    <link rel="stylesheet" href="blockreports.css">
+
+    <title>Block Reports</title>
+  </head>
+  <body>
+
+    <header class="navbar navbar-inverse bs-docs-nav" role="banner">
+    <div class="container">
+      <div class="navbar-header">
+        <div class="navbar-brand">Hadoop</div>
+      </div>
+
+      <ul class="nav navbar-nav" id="ui-tabs">
+        <li><a href="dfshealth.html#tab-overview">Overview</a></li>
+        <li><a href="dfshealth.html#tab-datanode">Datanodes</a></li>
+        <li><a href="dfshealth.html#tab-datanode-volume-failures">Datanode Volume Failures</a></li>
+        <li><a href="dfshealth.html#tab-snapshot">Snapshot</a></li>
+        <li><a href="dfshealth.html#tab-startup-progress">Startup Progress</a></li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Utilities <b class="caret"></b></a>
+          <ul class="dropdown-menu">
+            <li><a href="explorer.html">Browse the file system</a></li>
+            <li><a href="#">Block Reports</a></li>
+            <li><a href="logs">Logs</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    </header>
+
+    <div class="container">
+      <div class="page-header">
+        <h1>Block Report Dashboard</h1>
+      </div>
+      <div id="alert-panel">
+        <div class="alert alert-danger">
+          <button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
+          <div class="alert-body" id="alert-panel-body"></div>
+        </div>
+      </div>
+
+      <!-- SELECTOR FILTERS DIV -->
+      <div id="selectors">
+        <!--  -->
+        <div class="selector">
+          <span>Include reports for blocks that are no longer present in the hdfs cluster:</span>
+          <label class="toggle">
+            <input type="checkbox" id="past-blocks">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <br>
+        <!-- Data types selector -->
+        <div class="selector">
+          <span>Types of data to present:</span>
+          <button id="healthy" class="togglebutton">Healthy</button>
+          <button id="corrupted" class="togglebutton">Corrupted</button>
+        </div>
+        <hr>
+        <!-- Datanode filters -->
+        <div>
+
+        </div>
+      </div>
+      <!-- CHART DIV -->
+      <div id="chartdiv"></div>
+      <div>
+        <div class="row">
+          <hr/>
+          <div class="col-xs-2"><p>Hadoop, 2018.</p></div>
+        </div>
+      </div>
+    </div>
+
+
+    <script type="text/javascript" src="/static/jquery-1.10.2.min.js">
+    </script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap-editable.min.js">
+    </script><script type="text/javascript" src="/static/dataTables.bootstrap.js">
+    </script><script type="text/javascript" src="/static/json-bignum.js">
+    </script><script type="text/javascript" src="/static/rest-csrf.js">
+    </script><script type="text/javascript" src="/static/moment.min.js">
+    </script><script type="text/javascript" src="blockreports.js">
+    </script><script type="text/javascript" src="static/blockchain.js">
+    </script>
+  </body>
+</html>
