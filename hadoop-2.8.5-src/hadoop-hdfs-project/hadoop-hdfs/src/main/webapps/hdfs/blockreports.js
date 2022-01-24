@@ -1,11 +1,25 @@
+disable_selectors();
+
 var all_data;
 
 /* Filter variables */
+var past_events_f = false;
+var healthy_f = true;
+var corrupted_f = true;
+var dnode_addr_f = "All";
+var datetime_type_f = "All";
+var from_datetime_f, to_datetime_f;
+
+
+
+
 
 function parse_events(events) {
     const data = [];
+    const blockchain_addresses = new Set();
     events.forEach(event => {
         const bc_addr = event.returnValues.datanode.toLowerCase();
+        blockchain_addresses.add(bc_addr);
         const ip = bc_to_ip[bc_addr];
         const time = format_time(event.returnValues.time);
         const time_dnode = time + ' @ ' + (ip === undefined ? 'N/A' : ip) + '\n' + bc_addr;
@@ -27,14 +41,13 @@ function parse_events(events) {
             });
         });
     });
+    bc_addresses = Array.from(blockchain_addresses);
     return data;
 }
 
 
 /*  CHART CREATION AND CUSTOMIZATION  */
 am4core.ready(function() {
-
-    $('#selectors').hide();
 
     am4core.useTheme(am4themes_animated);
 
@@ -119,13 +132,6 @@ am4core.ready(function() {
         }
         return tooltipHTML;
     })
-    /*tooltipHTML = `<center><strong>Block #{blockId}</strong></center>
-    <center>
-        Block
-        <strong>{blockIdx}/{fileBlocks}</strong>
-        of file
-        <span style="font-family:monospace">{file}</span>
-    </center>`;*/
     columnTemplate.width = am4core.percent(80);
     columnTemplate.height = am4core.percent(80);
 
@@ -157,10 +163,10 @@ am4core.ready(function() {
     // Get events at startup and add the to chart
     blockchain(parse_events).then(data => {
         all_data = data;
-        chart.data = all_data;
-        $('#selectors').show();
+        add_dnode_selector_options();
         chart.scrollbarX = new am4core.Scrollbar();
         add_scrollbar(chart.scrollbarX);
+        update_chart();
     });
     
 
@@ -180,7 +186,126 @@ am4core.ready(function() {
 });
 /* END OF CHART CREATION STAFF */
 
+function disable_selectors() {
+    const selectors = document.querySelectorAll('.selector');
+    selectors.forEach(selector => selector.disabled = true);
+}
+
+function enable_selectors() {
+    const selectors = document.querySelectorAll('.selector');
+    selectors.forEach(selector => selector.disabled = false);
+}
+
 /* UPDATE CHART DATA */
 function update_chart() {
-    
+    disable_selectors();
+    /* A filter function */
+    const myFilter = item => {
+        // filter by file existence
+        if(!past_events_f && item['file'] === undefined)
+            return false;
+        // filter by datatype
+        if(!(item['wrong'] ? corrupted_f : healthy_f))
+            return false;
+        // filter by datanode ip or bc address
+        if(dnode_addr_f !== "All" && dnode_addr_f !== item['time_dnode'].split(/[\n\ ]/)[4] && dnode_addr_f !== item['time_dnode'].split(/[\n\ ]/)[5])
+            return false;
+        // filter by date-time
+        const date = new Date(item['time_dnode'].split(' @ ')[0]);
+        switch (datetime_type_f) {
+            case 'All':
+                return true;
+            case 'Date':
+                return (from_datetime_f !== undefined &&
+                        from_datetime_f.getFullYear() === date.getFullYear() &&
+                        from_datetime_f.getMonth() === date.getMonth() &&
+                        from_datetime_f.getDate() === date.getDate());
+            case 'Datetime Range':
+                return (from_datetime_f !== undefined &&
+                        to_datetime_f !== undefined &&
+                        from_datetime_f <= date &&
+                        to_datetime_f >= date);
+            default:
+                return false;
+        }
+    };
+    chart.data = all_data.filter(myFilter);
+    enable_selectors();
 }
+
+/* EVENT/FILTER LISTENERS */
+document.getElementById("past-events-checkbox").addEventListener("change", e => {
+    past_events_f = e.target.checked;
+    update_chart();
+});
+
+document.getElementById("healthy-checkbox").addEventListener("change", e => {
+    healthy_f = e.target.checked;
+    update_chart();
+});
+
+document.getElementById("corrupted-checkbox").addEventListener("change", e => {
+    corrupted_f = e.target.checked;
+    update_chart();
+});
+
+document.getElementById("dnode-selector").addEventListener("change", e => {
+    dnode_addr_f = e.target.value;
+    update_chart();
+});
+
+document.getElementById("datetime-selector").addEventListener("change", e => {
+    datetime_type_f = e.target.value;
+    update_chart();
+});
+
+$("#from-datetime").on("dp.change", function (e) {
+    from_datetime_f = new Date(e.date);
+    if(datetime_type_f != 'All'){
+        //console.log(from_datetime_f) ;
+        update_chart();
+    }
+});
+$("#to-datetime").on("dp.change", function (e) {
+    to_datetime_f = new Date(e.date);
+    if(datetime_type_f == 'Datetime Range') {
+        //console.log(to_datetime_f);
+        update_chart();
+    }
+});
+
+
+function add_dnode_selector_options() {
+    const selector = document.getElementById("dnode-selector");
+    // create IP optgroup
+    if(datanodes.length > 0) {
+        const ip_group = document.createElement("optgroup");
+        ip_group.label = "IP";
+        datanodes.forEach(dnode => {
+            const elem = document.createElement("option");
+            elem.textContent = dnode;
+            elem.disabled = true;
+            elem.setAttribute("class", "selector");
+            ip_group.appendChild(elem);
+        });
+        selector.appendChild(ip_group);
+    }
+    // create BC optgroup
+    if(bc_addresses.length > 0) {
+        const bc_group = document.createElement("optgroup");
+        bc_group.label = "Blockchain";
+        bc_addresses.forEach(dnode => {
+            const elem = document.createElement("option");
+            elem.textContent = dnode;
+            elem.disabled = true;
+            elem.setAttribute("class", "selector");
+            bc_group.appendChild(elem);
+        });
+        selector.appendChild(bc_group);
+    }
+}
+
+$('#from-datetime').datetimepicker();
+$('#to-datetime').datetimepicker({
+    useCurrent: false //Important! See issue #1075
+});

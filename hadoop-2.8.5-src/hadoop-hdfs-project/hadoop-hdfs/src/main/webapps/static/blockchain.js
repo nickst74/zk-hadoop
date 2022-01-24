@@ -3,6 +3,7 @@ const ip_to_bc = {};
 const bc_to_ip = {};
 
 var datanodes = [];
+var bc_addresses;
 const datanode_to_blocklist = {};
 const file_to_blocklist = {};
 const block_to_file = {};
@@ -153,5 +154,3 @@ async function blockchain(myfunc){
   return myfunc(events);
 
 };
-
-//blockchain(x => console.log(x));

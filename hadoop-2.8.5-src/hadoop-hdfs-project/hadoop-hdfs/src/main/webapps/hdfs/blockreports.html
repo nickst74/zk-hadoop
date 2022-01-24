@@ -20,12 +20,14 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=9" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
+    <!--<link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />-->
     <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap-editable.css"/>
     <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
     <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/css/bootstrap-datetimepicker.min.css" />
+    <!-- Datetime picker deps -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/css/bootstrap-datetimepicker.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
     <!-- graph resources -->
     <script src="https://cdn.amcharts.com/lib/4/core.js"></script>
     <script src="https://cdn.amcharts.com/lib/4/charts.js"></script>
@@ -75,28 +77,68 @@
       </div>
 
       <!-- SELECTOR FILTERS DIV -->
-      <div id="selectors">
-        <!--  -->
-        <div class="selector">
-          <span>Include reports for blocks that are no longer present in the hdfs cluster:</span>
-          <label class="toggle">
-            <input type="checkbox" id="past-blocks">
-            <span class="slider"></span>
-          </label>
-        </div>
-        <br>
-        <!-- Data types selector -->
-        <div class="selector">
-          <span>Types of data to present:</span>
-          <button id="healthy" class="togglebutton">Healthy</button>
-          <button id="corrupted" class="togglebutton">Corrupted</button>
+      <div>
+        
+        <!-- Datanode selectors -->
+        <div>
+          <span>Choose Datanode by <strong>IP or Blockchain</strong> address:</span>
+          <br>
+          <select name="dnode-selector" id="dnode-selector" class="selector" autocomplete="off">
+            <option class="selector" selected="true">All</option>
+          </select>
         </div>
         <hr>
-        <!-- Datanode filters -->
+        <!-- Data types selector -->
         <div>
+          <span>Types of data to show:</span>
+          <input type="checkbox" id="healthy-checkbox" class="selector" checked="true" autocomplete="off">
+          <input type="checkbox" id="corrupted-checkbox" class="selector" checked="true" autocomplete="off">
+        </div>
 
+        <!-- Checkbox for reports of deleted files -->
+        <div>
+          <span>Include reports for blocks that are no longer present in the hdfs cluster:</span>
+          <input type="checkbox" id="past-events-checkbox" class="selector" autocomplete="off">
+        </div>
+        <!------------------------------------------->
+        <hr>
+        <!-- Date-time pickers -->
+      <div>
+        <div>
+          <span>Filter block reports by date or datetime range:</span>
+          <select name="datetime-selector" id="datetime-selector" autocomplete="off">
+            <option>All</option>
+            <option>Date</option>
+            <option>Datetime Range</option>
+          </select>
+        </div>
+        <br>
+        <div class="container">
+          <div class='col-md-5'>
+            <div class="form-group">
+              <div class='input-group date' id='from-datetime'>
+                  <input type='text' class="form-control selector" autocomplete="off"/>
+                  <span class="input-group-addon">
+                  <span class="glyphicon glyphicon-calendar"></span>
+                  </span>
+              </div>
+            </div>
+          </div>
+          <div class='col-md-5'>
+              <div class="form-group">
+                <div class='input-group date' id='to-datetime'>
+                    <input type='text' class="form-control selector" autocomplete="off"/>
+                    <span class="input-group-addon">
+                    <span class="glyphicon glyphicon-calendar"></span>
+                    </span>
+                </div>
+              </div>
+          </div>
         </div>
       </div>
+      
+      </div>
+      <hr>
       <!-- CHART DIV -->
       <div id="chartdiv"></div>
       <div>
@@ -108,15 +150,22 @@
     </div>
 
 
-    <script type="text/javascript" src="/static/jquery-1.10.2.min.js">
-    </script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
-    </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <!--<script type="text/javascript" src="/static/jquery-1.10.2.min.js"></script>-->
+    
+    <script type="text/javascript" src="/static/jquery.dataTables.min.js">
+    </script><script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js">
     </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap-editable.min.js">
     </script><script type="text/javascript" src="/static/dataTables.bootstrap.js">
     </script><script type="text/javascript" src="/static/json-bignum.js">
     </script><script type="text/javascript" src="/static/rest-csrf.js">
-    </script><script type="text/javascript" src="/static/moment.min.js">
-    </script><script type="text/javascript" src="blockreports.js">
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/momentjs/2.14.1/moment.min.js"></script>
+    <!--<script type="text/javascript" src="/static/moment.min.js"></script>-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/js/bootstrap-datetimepicker.min.js"></script>
+
+    <script type="text/javascript" src="blockreports.js">
     </script><script type="text/javascript" src="static/blockchain.js">
     </script>
   </body>
