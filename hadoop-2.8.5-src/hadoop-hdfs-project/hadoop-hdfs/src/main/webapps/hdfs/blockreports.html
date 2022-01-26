@@ -78,43 +78,56 @@
 
       <!-- SELECTOR FILTERS DIV -->
       <div>
-        
-        <!-- Datanode selectors -->
-        <div>
-          <span>Choose Datanode by <strong>IP or Blockchain</strong> address:</span>
-          <br>
-          <select name="dnode-selector" id="dnode-selector" class="selector" autocomplete="off">
-            <option class="selector" selected="true">All</option>
-          </select>
+        <!-- Data types selector -->
+        <div class="container">
+          <div>
+            <span class="prompt-sentence">Types of data to show:</span>
+            <div class="toggle-button">
+              <input type="checkbox" id="healthy-checkbox" class="selector" checked="true" autocomplete="off">
+              <label for="healthy-checkbox">Healthy</label>
+            </div>
+            <div class="toggle-button">
+              <input type="checkbox" id="corrupt-checkbox" class="selector" checked="true" autocomplete="off">
+              <label for="corrupt-checkbox">Corrupt</label>
+            </div>
+          </div>
+          <!-- Checkbox for reports of deleted files -->
+          <div>
+            <span class="prompt-sentence">Include reports for blocks that are no longer present in the hdfs cluster:</span>
+            <label class="toggle-slider">
+              <input type="checkbox" id="past-events-checkbox" class="selector" autocomplete="off">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <!------------------------------------------->
         </div>
         <hr>
-        <!-- Data types selector -->
-        <div>
-          <span>Types of data to show:</span>
-          <input type="checkbox" id="healthy-checkbox" class="selector" checked="true" autocomplete="off">
-          <input type="checkbox" id="corrupted-checkbox" class="selector" checked="true" autocomplete="off">
+        <!-- Datanode selectors -->
+        <div class="container">
+          <span class="prompt-sentence">Choose Datanode by <strong>IP or Blockchain address</strong>:</span>
+          <div id="dnode-selector-div" class="custom-select">
+            <select name="dnode-selector" id="dnode-selector" class="selector" autocomplete="off">
+              <option class="selector" selected="true">All</option>
+            </select>
+          </div>
         </div>
-
-        <!-- Checkbox for reports of deleted files -->
-        <div>
-          <span>Include reports for blocks that are no longer present in the hdfs cluster:</span>
-          <input type="checkbox" id="past-events-checkbox" class="selector" autocomplete="off">
-        </div>
-        <!------------------------------------------->
         <hr>
         <!-- Date-time pickers -->
-      <div>
+      <div class="container">
         <div>
-          <span>Filter block reports by date or datetime range:</span>
-          <select name="datetime-selector" id="datetime-selector" autocomplete="off">
-            <option>All</option>
-            <option>Date</option>
-            <option>Datetime Range</option>
-          </select>
+          <span class="prompt-sentence">Filter block reports by date or datetime range:</span>
+          <div id="datetime-selector-div" class="custom-select">
+            <select name="datetime-selector" id="datetime-selector" class="selector" autocomplete="off">
+              <option class="selector">All</option>
+              <option class="selector">Date</option>
+              <option class="selector">Datetime Range</option>
+            </select>
+          </div>
         </div>
         <br>
-        <div class="container">
-          <div class='col-md-5'>
+        <div>
+          <div class='col-md-5' style="float: left;">
+            From (or specific day):
             <div class="form-group">
               <div class='input-group date' id='from-datetime'>
                   <input type='text' class="form-control selector" autocomplete="off"/>
@@ -124,7 +137,8 @@
               </div>
             </div>
           </div>
-          <div class='col-md-5'>
+          <div class='col-md-5' style="float: right;">
+            To (optional, for datetime range):
               <div class="form-group">
                 <div class='input-group date' id='to-datetime'>
                     <input type='text' class="form-control selector" autocomplete="off"/>

@@ -10,10 +10,28 @@ var dnode_addr_f = "All";
 var datetime_type_f = "All";
 var from_datetime_f, to_datetime_f;
 
+/**** Just initialize datetime pickers  ****/
+$('#from-datetime').datetimepicker();
+$('#to-datetime').datetimepicker({
+    useCurrent: false //Important! See issue #1075
+});
+/*******************************************/
 
+function disable_selectors() {
+    const selectors = document.querySelectorAll('.selector');
+    selectors.forEach(selector => selector.disabled = true);
+}
 
+function enable_selectors() {
+    const selectors = document.querySelectorAll('.selector');
+    selectors.forEach(selector => selector.disabled = false);
+}
 
-
+/**
+ * Parsing function for BlockReport events from blockchain
+ * @param {list} events List of BlockReport events 
+ * @returns Formatted Reports
+ */
 function parse_events(events) {
     const data = [];
     const blockchain_addresses = new Set();
@@ -160,16 +178,6 @@ am4core.ready(function() {
         axis.thumb.background.states.getKey("down").properties.fill = am4core.color("#AD7371");
     }
 
-    // Get events at startup and add the to chart
-    blockchain(parse_events).then(data => {
-        all_data = data;
-        add_dnode_selector_options();
-        chart.scrollbarX = new am4core.Scrollbar();
-        add_scrollbar(chart.scrollbarX);
-        update_chart();
-    });
-    
-
     var cellSize = 20;
     chart.events.on('datavalidated', function(ev) {
         // Get objects of interest
@@ -183,20 +191,23 @@ am4core.ready(function() {
         chart.svgContainer.htmlElement.style.height = targetHeight + 'px';
     });
 
+    // Get events at startup and add the to chart
+    blockchain(parse_events).then(data => {
+        // init data
+        all_data = data;
+        // fix datanode selector with fetched data
+        add_dnode_selector_options();
+        // add chart scrollbar
+        chart.scrollbarX = new am4core.Scrollbar();
+        add_scrollbar(chart.scrollbarX);
+        // init chart
+        update_chart();
+    });
+
 });
 /* END OF CHART CREATION STAFF */
 
-function disable_selectors() {
-    const selectors = document.querySelectorAll('.selector');
-    selectors.forEach(selector => selector.disabled = true);
-}
-
-function enable_selectors() {
-    const selectors = document.querySelectorAll('.selector');
-    selectors.forEach(selector => selector.disabled = false);
-}
-
-/* UPDATE CHART DATA */
+/**** UPDATE CHART DATA ****/
 function update_chart() {
     disable_selectors();
     /* A filter function */
@@ -232,8 +243,9 @@ function update_chart() {
     chart.data = all_data.filter(myFilter);
     enable_selectors();
 }
+/**** END OF UPDATE CHART DATA ****/
 
-/* EVENT/FILTER LISTENERS */
+/**** DEFINE EVENT/FILTER LISTENERS ****/
 document.getElementById("past-events-checkbox").addEventListener("change", e => {
     past_events_f = e.target.checked;
     update_chart();
@@ -244,17 +256,19 @@ document.getElementById("healthy-checkbox").addEventListener("change", e => {
     update_chart();
 });
 
-document.getElementById("corrupted-checkbox").addEventListener("change", e => {
+document.getElementById("corrupt-checkbox").addEventListener("change", e => {
     corrupted_f = e.target.checked;
     update_chart();
 });
 
 document.getElementById("dnode-selector").addEventListener("change", e => {
+    document.getElementById("dnode-selector-div").style.width = (e.target.value.length * 0.52 +4.2)+'em';
     dnode_addr_f = e.target.value;
     update_chart();
 });
 
 document.getElementById("datetime-selector").addEventListener("change", e => {
+    document.getElementById("datetime-selector-div").style.width = (e.target.value.length * 0.52 +4.2)+'em';
     datetime_type_f = e.target.value;
     update_chart();
 });
@@ -262,19 +276,18 @@ document.getElementById("datetime-selector").addEventListener("change", e => {
 $("#from-datetime").on("dp.change", function (e) {
     from_datetime_f = new Date(e.date);
     if(datetime_type_f != 'All'){
-        //console.log(from_datetime_f) ;
         update_chart();
     }
 });
 $("#to-datetime").on("dp.change", function (e) {
     to_datetime_f = new Date(e.date);
     if(datetime_type_f == 'Datetime Range') {
-        //console.log(to_datetime_f);
         update_chart();
     }
 });
+/**** END OF DEFINE EVENT/FILTER LISTENERS ****/
 
-
+/**** INIT DATANODE SELECTION DROPDOWN****/
 function add_dnode_selector_options() {
     const selector = document.getElementById("dnode-selector");
     // create IP optgroup
@@ -303,9 +316,5 @@ function add_dnode_selector_options() {
         });
         selector.appendChild(bc_group);
     }
-}
-
-$('#from-datetime').datetimepicker();
-$('#to-datetime').datetimepicker({
-    useCurrent: false //Important! See issue #1075
-});
+};
+/**** END OF INIT DATANODE SELECTION DROPDOWN****/
