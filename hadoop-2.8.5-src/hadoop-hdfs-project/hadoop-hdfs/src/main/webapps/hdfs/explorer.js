@@ -163,6 +163,7 @@
         if (d === undefined) {
           return;
         }
+        //console.log(d);
 
         dust.render('block-info', d, function(err, out) {
           $('#file-info-blockinfo-body').html(out);
@@ -202,6 +203,32 @@
       });
 
       if (d.fileLength > 0) {
+        /**** ADD STATUS TO ALL BLOCKS OF FILE ****/
+        for(var i = 0; i < d.locatedBlocks.length; i++) {
+          const blockId = d.locatedBlocks[i].block.blockId;
+          var corrupt = false, healthy = false;
+          if(block_status[blockId] !== undefined) {
+            d.locatedBlocks[i].block_status = block_status[blockId];
+            for(var j = 0; j < d.locatedBlocks[i].locations.length; j++) {
+              const bc_addr = d.locatedBlocks[i].locations[j].blockchainAddress;
+              const dnode_status = block_status[blockId].per_dnode[bc_addr];
+              d.locatedBlocks[i].locations[j].status = dnode_status;
+              if(dnode_status !== undefined) {
+                corrupt ||= dnode_status.wrong;
+                healthy ||= !dnode_status.wrong;
+              }
+            }
+            // just a health status mark for the block
+            if(!corrupt && healthy)
+              d.locatedBlocks[i].block_status.health = "x2705"; // All good
+            else if(corrupt && !healthy)
+              d.locatedBlocks[i].block_status.health = "x26D4"; // All corrupt
+            else if(corrupt && healthy)
+              d.locatedBlocks[i].block_status.health = "x2757"; // Some corrupt
+            else
+              d.locatedBlocks[i].block_status.health = "x2754"; // Fate unknown
+          }
+        }
         show_block_info(d.locatedBlocks);
         $('#file-info-blockinfo-panel').show();
       } else {
@@ -278,6 +305,71 @@
       $('#directory').val(dir);
       window.location.hash = dir;
       var base = dust.makeBase(HELPERS);
+
+      /**** ADD STATUS TO FILE ****/
+      //console.log(d.FileStatus);
+      for (var i = 0; i < d.FileStatus.length; i++) {
+        //console.log(d.FileStatus[i]);
+        if (d.FileStatus[i].type === "FILE") {
+          /*
+           * status code:
+           * 0 -> OK
+           * 1 -> not OK
+           * 2 -> Unknown
+           * 3 -> all replicas of a block are corrupt
+           * 4 -> Well if this happens... the file must have come from outer space.
+           */
+          var code = 0;
+          const block_list = file_to_blocklist[(current_directory.endsWith('/') ? current_directory : current_directory + '/') + d.FileStatus[i].pathSuffix];
+          if(block_list !== undefined) {
+            block_list.some(blockId => {
+              if(block_status[blockId] !== undefined) {
+                var found_healthy = false, found_corrupt = false;
+                for(const [_, status] of Object.entries(block_status[blockId].per_dnode)) {
+                  found_healthy ||= !status.wrong;
+                  found_corrupt ||= status.wrong;
+                }
+                if(!found_healthy) {
+                  // no healthy replica
+                  code = 3;
+                  return true;
+                } else if(found_corrupt) {
+                  // both healthy and corrupt
+                  code = Math.max(code, 1);
+                }
+              } else {
+                // no reports for block. Fate unknown
+                code = 2;
+              }
+            });
+          } else {
+            code = 4;
+            console.warn("File not visible from fsck. Seems fishy");
+          }
+          // finally insert the right symbol
+          switch (code) {
+            case 0:
+              d.FileStatus[i].blockHealth = "x2705";
+              break;
+            case 1:
+              d.FileStatus[i].blockHealth = "x2757";
+              break;
+            case 2:
+              d.FileStatus[i].blockHealth = "x2754";
+              break;
+            case 3:
+              d.FileStatus[i].blockHealth = "x26D4";
+              break;
+            case 4:
+              d.FileStatus[i].blockHealth = "x1F47D";
+              break;
+            default:
+              d.FileStatus[i].blockHealth = "x2754";
+              break;
+          }
+        }
+        
+      }
       dust.render('explorer', base.push(d), function(err, out) {
         $('#panel').html(out);
 
@@ -321,6 +413,7 @@
                   { 'searchable': false, 'render': func_time_render}, //Last Modified
                   { 'searchable': false }, //Replication
                   null, //Block Size
+                  { 'searchable': false }, //Block Health
                   null, //Name
                   { 'sortable' : false } //Trash
               ],
@@ -334,6 +427,12 @@
   function init() {
     dust.loadSource(dust.compile($('#tmpl-explorer').html(), 'explorer'));
     dust.loadSource(dust.compile($('#tmpl-block-info').html(), 'block-info'));
+
+    // just a helper function to format datetime
+    dust.helpers.format_time = function (chunk, ctx, bodies, params) {
+      var value = dust.helpers.tap(params.value, chunk, ctx);
+      return chunk.write(format_time(value));
+    };
 
     var b = function() { browse_directory($('#directory').val()); };
     $('#btn-nav-directory').click(b);
@@ -372,5 +471,59 @@
     });
   })
 
-  init();
+  /**
+   * Parsing function for BlockReport events from blockchain.
+   * Specific for explorer.html use, returns status only for existing blocks
+   * on active datanodes (we are browsing the current state of the hdfs)
+   * @param {list} events List of BlockReport events 
+   * @returns Dict with number of reports per block/datanode
+   */
+  function parse_events(events) {
+    const block_status_dict = {};
+
+    events.forEach(event => {
+      const dnode_addr = event.returnValues.datanode.toLowerCase();
+      // keep reports from active datanodes only
+      if(bc_to_ip[dnode_addr] !== undefined) {
+        event.returnValues.blocks.forEach(blockId => {
+          // parse all blockIds reported but keep only the active ones
+          if(block_to_file[blockId] !== undefined) {
+            if(block_status_dict[blockId] === undefined) {
+              block_status_dict[blockId] = {
+                per_dnode: {},
+                total: 0,
+                wrong: 0,
+                last_update: 0
+              };
+            }
+            if (block_status_dict[blockId].per_dnode[dnode_addr] === undefined) {
+              block_status_dict[blockId].per_dnode[dnode_addr] = {
+                total: 0,
+                wrong: 0
+              };
+            }
+            block_status_dict[blockId].total++;
+            block_status_dict[blockId].per_dnode[dnode_addr].total++;
+            block_status_dict[blockId].last_update = Math.max(block_status_dict[blockId].last_update, event.returnValues.time);
+          }
+        });
+        //parse wrong reports
+        event.returnValues.corrupted.forEach(blockId => {
+          if(block_to_file[blockId] !== undefined) {
+            // now count the wrong reports
+            block_status_dict[blockId].wrong++;
+            block_status_dict[blockId].per_dnode[dnode_addr].wrong++;
+          }
+        })
+      }
+    });
+    return block_status_dict;
+  }
+
+  var block_status;
+
+  blockchain(parse_events).then(data => {
+    block_status = data;
+    init();
+  });
 })();

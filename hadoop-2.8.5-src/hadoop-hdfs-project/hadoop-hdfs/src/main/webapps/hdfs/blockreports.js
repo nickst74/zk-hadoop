@@ -29,6 +29,7 @@ function enable_selectors() {
 
 /**
  * Parsing function for BlockReport events from blockchain
+ * Specific for Block Report Dashboard use
  * @param {list} events List of BlockReport events 
  * @returns Formatted Reports
  */
