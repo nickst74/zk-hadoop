@@ -131,6 +131,9 @@ public class DatanodeHttpServer implements Closeable {
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     this.infoServer.addServlet(null, "/blockScannerReport",
                                BlockScanner.Servlet.class);
+    // also adding my corruptor servlet
+    this.infoServer.addServlet(null, "/corrupt",
+    													 DataNode.CorruptorServlet.class);
     DataNodeUGIProvider.init(conf);
     this.infoServer.start();
     final InetSocketAddress jettyAddr = infoServer.getConnectorAddress(0);

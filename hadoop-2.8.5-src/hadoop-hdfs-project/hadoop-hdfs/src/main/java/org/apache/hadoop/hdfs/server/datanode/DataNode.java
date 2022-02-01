@@ -77,6 +77,9 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -88,6 +91,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -101,7 +105,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -3340,6 +3349,91 @@ public class DataNode extends ReconfigurableBase
 
   public DatanodeConnection getCon() {
       return this.con;
+  }
+  
+  /* Just a simple servlet with an endpoint to corrupt blocks
+   * stored on the datanode filesystem. For zk_hadoop
+   * presentation purposes only.
+   */
+  @InterfaceAudience.Private
+  public static class CorruptorServlet extends HttpServlet {
+		private static final long serialVersionUID = 1L;
+		
+		@Override
+		protected void doPost(HttpServletRequest req,
+													HttpServletResponse resp) throws IOException {
+			// get provided parameters
+			String blockpool_id = req.getParameter("blockpool");
+			String bid_s = req.getParameter("blockId");
+			String perc_s = req.getParameter("perc");
+			String clustered_s = req.getParameter("clustered");
+			long block_id;
+			int perc;
+			boolean clustered;
+			// check input parameters
+			try {
+				block_id = Long.parseLong(bid_s);
+				perc = Integer.parseInt(perc_s);
+				if(clustered_s != null && Boolean.parseBoolean(clustered_s)) {
+					clustered = true;
+				} else {
+					clustered = false;
+				}
+			} catch (Exception e) {
+				// parameters provided wrong format or missing
+				resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				resp.setHeader("Message", "Please make sure that parameter format is correct.");
+				return;
+			}
+
+			// RNG init
+			Random rand = new Random(System.currentTimeMillis());
+			// get Datanode from context and find block in fs
+			DataNode dn = (DataNode) getServletContext().getAttribute("datanode");
+			String filepath;
+			// check that file exists and find its path in the local filesystem
+			try {
+				ExtendedBlock eb = new ExtendedBlock(blockpool_id, dn.data.getStoredBlock(blockpool_id, block_id));
+				// did not see any modificaiton interface in fs interface so doing it manually
+				filepath = dn.data.getBlockLocalPathInfo(eb).getBlockPath();
+			} catch (Exception e) {
+				// file not found
+				resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+				resp.setHeader("Message", "The requested block '"+blockpool_id+":"+bid_s+"' was not found.");
+				return;
+			}
+			// At last read and corrupt file contents
+			try {
+				// open file and read all contents
+				byte[] buffer = Files.readAllBytes(Paths.get(filepath));
+				if(!clustered) {
+					/**** corrupt perc% of total bytes at a random spot ****/
+					// Integer should be good enough, it could overflow only if block size reaches few Gigabytes
+					// but why would someone configure that
+					int toCorrupt = buffer.length * perc / 100; // bytes to corrupt
+					int location = rand.nextInt(buffer.length - toCorrupt); // choose starting location randomly
+					for(int i = 0; i < toCorrupt; i++) {
+						buffer[location+i] ^= 0xFF;
+					}
+				} else {
+					/**** Just a stupid way to flip a perc% of the bytes in a file randomly ****/
+					for(int i = 0; i < buffer.length; i++) {
+						if(rand.nextInt(100) < perc) {
+							buffer[i] ^= 0xFF;
+						}
+					}
+				}
+				// write modified contents to tmp file
+				FileUtils.writeByteArrayToFile(new File(filepath+"_tmp"), buffer);
+				// Finally overwrite existing file with corrupt file
+				Files.move(Paths.get(filepath+"_tmp"), Paths.get(filepath), StandardCopyOption.ATOMIC_MOVE);
+			} catch (Exception e) {
+				// Well IO operations failed for unforseen reasons
+				resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			}
+			
+		}
+  	
   }
 
 }
