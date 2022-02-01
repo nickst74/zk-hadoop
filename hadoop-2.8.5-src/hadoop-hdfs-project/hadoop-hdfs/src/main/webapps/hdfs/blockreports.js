@@ -263,13 +263,14 @@ document.getElementById("corrupt-checkbox").addEventListener("change", e => {
 });
 
 document.getElementById("dnode-selector").addEventListener("change", e => {
-    document.getElementById("dnode-selector-div").style.width = (e.target.value.length * 0.52 +4.2)+'em';
+    // well, not a fan of css, but this gets the job done at least
+    document.getElementById("dnode-selector-div").style.width = (e.target.value.length * 0.58 +4.2)+'em';
     dnode_addr_f = e.target.value;
     update_chart();
 });
 
 document.getElementById("datetime-selector").addEventListener("change", e => {
-    document.getElementById("datetime-selector-div").style.width = (e.target.value.length * 0.52 +4.2)+'em';
+    document.getElementById("datetime-selector-div").style.width = (e.target.value.length * 0.58 +4.2)+'em';
     datetime_type_f = e.target.value;
     update_chart();
 });
