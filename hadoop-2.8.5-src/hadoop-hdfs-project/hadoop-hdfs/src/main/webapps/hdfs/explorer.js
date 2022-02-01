@@ -320,7 +320,18 @@
            * 4 -> Well if this happens... the file must have come from outer space.
            */
           var code = 0;
-          const block_list = file_to_blocklist[(current_directory.endsWith('/') ? current_directory : current_directory + '/') + d.FileStatus[i].pathSuffix];
+          var filepath = current_directory;
+          if(d.FileStatus[i].pathSuffix !== "") {
+            // if we searched a directory then search through dir/filename
+            filepath += '/' + d.FileStatus[i].pathSuffix;
+          } else {
+            // else if searched specific file view details too
+            view_file_details(filepath.split('/').at(-1), filepath);
+          }
+          // just remove multiple '/' so it can match with fsck output
+          filepath = filepath.replaceAll(/\/+/ig, '/');
+          
+          const block_list = file_to_blocklist[filepath];
           if(block_list !== undefined) {
             block_list.some(blockId => {
               if(block_status[blockId] !== undefined) {
@@ -381,6 +392,7 @@
           if (type == 'DIRECTORY') {
             browse_directory(abs_path);
           } else {
+            //console.log(path, abs_path);
             view_file_details(path, abs_path);
           }
         });
