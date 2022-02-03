@@ -6,14 +6,68 @@ input#corruptor-range {
 #corruptor-div select {
     vertical-align: middle;
     float: inline-end;
-    background-color: rgba(228, 228, 228, 0.705);
+    background-color: #e4e4e4b4;
 }
 
 #corrupt-btn {
-    background-color: rgb(255, 49, 49);
+    background-color: #ff3131;
     border-style: hidden;
 }
 
 #corruptor-mode-switch {
     float: right;
+    position: relative;
+    height: fit-content;
+    width: fit-content;
+}
+
+.swal2-popup {
+    font-size: 1.6rem !important;
+}
+
+.modal {
+    color: initial;
+}
+
+.toggle-slider {
+    border-style:initial;
+    border-color: grey;
+}
+
+body {
+    -webkit-transition: background 0.5s ease-in-out;
+    -moz-transition: background 0.5s ease-in-out;
+    -o-transition: background 0.5s ease-in-out;
+    -ms-transition: background 0.5s ease-in-out;
+    transition: background 0.5s ease-in-out;
+}
+
+/* Join the dark side, we have cookies XD */
+/* And a good switch to pair it with https://codepen.io/cl0udc0ntr0l/pen/njQQbw */
+.dark-mode {
+    background: url(https://thetaiwantimes.com/wp-content/uploads/2020/06/HackerImage-scaled-1.jpg) no-repeat center center fixed;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+
+    background-color: rgb(61, 61, 61);
+    color: white;
+}
+
+/* info button style (mostly for corruptor mode and icon explanation) */
+#info-btn {
+    --diameter: 30px; 
+    border-radius: 50%;
+    height: var(--diameter);
+    width: var(--diameter);
+    vertical-align: middle;
+    text-align: center;
+    line-height: var(--diameter);
+    font-size: 20px;
+    font-style: bold;
+
+    background-color: rgb(0, 64, 94);
+    color: white;
+
 }

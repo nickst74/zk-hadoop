@@ -70,6 +70,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -3362,6 +3363,8 @@ public class DataNode extends ReconfigurableBase
 		@Override
 		protected void doPost(HttpServletRequest req,
 													HttpServletResponse resp) throws IOException {
+			// dont forget to enable CORS
+			resp.addHeader("Access-Control-Allow-Origin", "*");
 			// get provided parameters
 			String blockpool_id = req.getParameter("blockpool");
 			String bid_s = req.getParameter("blockId");
@@ -3381,8 +3384,9 @@ public class DataNode extends ReconfigurableBase
 				}
 			} catch (Exception e) {
 				// parameters provided wrong format or missing
-				resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-				resp.setHeader("Message", "Please make sure that parameter format is correct.");
+				//resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				//resp.getWriter().write("Please make sure that parameter format is correct.");
+				resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid parameter format.");
 				return;
 			}
 
@@ -3398,8 +3402,9 @@ public class DataNode extends ReconfigurableBase
 				filepath = dn.data.getBlockLocalPathInfo(eb).getBlockPath();
 			} catch (Exception e) {
 				// file not found
-				resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-				resp.setHeader("Message", "The requested block '"+blockpool_id+":"+bid_s+"' was not found.");
+				//resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+				//resp.getWriter().write("The requested block '"+blockpool_id+":"+bid_s+"' was not found.");
+				resp.sendError(HttpServletResponse.SC_NOT_FOUND, "The requested block was not found.");
 				return;
 			}
 			// At last read and corrupt file contents
@@ -3425,13 +3430,17 @@ public class DataNode extends ReconfigurableBase
 				}
 				// write modified contents to tmp file
 				FileUtils.writeByteArrayToFile(new File(filepath+"_tmp"), buffer);
-				// Finally overwrite existing file with corrupt file
+				// Finally overwrite existing file with corrupt file (well we could grab the lock but we are corrupting anyway...)
 				Files.move(Paths.get(filepath+"_tmp"), Paths.get(filepath), StandardCopyOption.ATOMIC_MOVE);
 			} catch (Exception e) {
 				// Well IO operations failed for unforseen reasons
-				resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+				//resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+				//resp.getWriter().write("Oops, that was not supposed to happen... Something went wrong while modifying file.");
+				resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Something went wrong while modifying file.");
+				return;
 			}
-			
+			resp.setStatus(HttpServletResponse.SC_OK);
+			//resp.getWriter().write(blockpool_id+":"+bid_s+" corrupt successful");
 		}
   	
   }

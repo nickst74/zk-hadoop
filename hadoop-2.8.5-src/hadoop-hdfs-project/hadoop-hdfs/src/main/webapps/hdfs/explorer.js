@@ -557,6 +557,42 @@
     return block_status_dict;
   }
 
+
+  /* utility buttons to toggle corruptor mode and for info */
+  toggle_theme(document.getElementById("corruptor-mode-checkbox").checked);
+
+  function toggle_theme(flag) {
+    if(flag) {
+      document.body.classList.add("dark-mode");
+    } else {
+      document.body.classList.remove("dark-mode");
+    }
+  }
+
+  // just a listener for the corruptor mode checkbox to change the theme
+  document.getElementById("corruptor-mode-checkbox").addEventListener('change', e => {toggle_theme(e.target.checked)});
+
+  document.getElementById("info-btn").addEventListener('click', _ => {
+    // just show a popup with usage info
+    const html_body = "<div style=\"text-align:left\">"+
+                        "<strong><u>Corruptor mode:</u></strong> enables an extra form in the file details window that lets you pick a block from the file of your choice "+
+                        "and corrupt it on any Datanode that contains a replica. Can be enabled from the upper-right switch.<hr>"+
+                        "<strong><u>Icons info</u></strong>"+
+                        "<ul><li>&#x2705 : No corrupt block replicas found</li>"+
+                        "<li>&#x2757 : Some replicas of a block are corrupt</li>"+
+                        "<li>&#x26D4 : <strong>All</strong> replicas of a block are corrupt</li>"+
+                        "<li>&#x2754 : No reports found for the block/file</li>"+
+                        "<li>&#x1F47D : You might have to reload the page</li></ul></div><hr>"
+    Swal.fire({
+      type: "info",
+      icon: "question",
+      confirmButtonText: "Got it!",
+      confirmButtonColor: "#5fa33e",
+      html: html_body
+    })
+  })
+  /*********************************************************/
+
   var block_status;
 
   blockchain(parse_events).then(data => {
@@ -572,6 +608,54 @@ function corrupt_button_pressed() {
   const dnode_addr = $("#corruptor-dnode :selected").val();
   const mode = $("#corruptor-mode :selected").val();
   const perc = $("#corruptor-range").val();
-  // TODO: IMPLEMENT CORRUPTION REQUEST
-  console.log(blockpoolId+":"+blockId+"=>"+dnode_addr+"=>"+(mode === "true" ? "Clustered" : "Random")+" %"+perc);
+  const hostname = $("#corruptor-dnode :selected").text();
+  // prepare request to corruptor servlet
+  const url = new URL("http://"+dnode_addr+"/corrupt");
+  url.searchParams.set('blockpool', blockpoolId);
+  url.searchParams.set('blockId', blockId);
+  url.searchParams.set('perc', perc);
+  url.searchParams.set('clustered', mode);
+  // create popup text
+  const html_body = "<div style=\"text-align: left\"><ul><li>BlockPoolId: "+blockpoolId+"</li>"
+                    +"<li>BlockId: "+blockId+"</li>"
+                    +"<li>Datanode: "+hostname+" ("+dnode_addr+")</li>"
+                    +"<li>Corruption Mode: "+(mode === "true" ? "Clustered" : "Random")+"</li>"
+                    +"<li>Percentage: "+perc+"%</li></ul></div>"
+  //console.log(url);
+  // open popup for confirmation (created with sweetalert2)
+  Swal.fire({
+    title: "Are you sure you want to corrupt this block?",
+    icon: "warning",
+    html: html_body,
+    footer: "<span style=\"color:red\">Warning: This process is irreversible!</span>",
+    showCancelButton: true,
+    confirmButtonText: 'Corrupt It!',
+    confirmButtonColor: "#ff3131",
+    showLoaderOnConfirm: true,
+    preConfirm: _ => {
+      return fetch(url, {
+        method: 'POST',
+        mode: 'cors'
+      })
+      .then(response => {
+        if(!response.ok) {
+          throw new Error(response.statusText);
+        }
+      })
+      .catch(error => {
+        Swal.showValidationMessage("Request failed<br>"+error);
+      })
+    },
+    allowOutsideClick: () => !Swal.isLoading()
+  }).then(result => {
+    if(result.isConfirmed) {
+      Swal.fire({
+        title: "Block corrupt successfully",
+        icon: "success",
+        showConfirmButton: false,
+        timer: 1500
+      })
+    }
+  });
+
 }
