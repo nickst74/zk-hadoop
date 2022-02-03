@@ -164,6 +164,31 @@
           return;
         }
         //console.log(d);
+        // if in corruptor mode prepare layout
+        if(document.getElementById("corruptor-mode-checkbox").checked) {
+          // first clear previous options
+          $("#corruptor-dnode").empty();
+          // get all datanodes and create the dropdown
+          const dnode_selector = document.getElementById("corruptor-dnode");
+          for(var i = 0; i < d.locations.length; i++) {
+            // create dnode option for every block location
+            const dnode_option = document.createElement("option");
+            dnode_option.text = d.locations[i].hostName;
+            // corruptor servlet runs on info port, so set value accordingly
+            dnode_option.value = d.locations[i].ipAddr + ":" + d.locations[i].infoPort;
+            // add option to selector
+            dnode_selector.appendChild(dnode_option);
+            // also set hidden values for later
+            document.getElementById("blockpoolId").value = d.block.blockPoolId;
+            document.getElementById("blockId").value = d.block.blockId;
+          }
+          // initialize with first option
+          dnode_selector.selectedIndex = 0;
+          $("#corruptor-div").show();
+        } else {
+          // else hide layout
+          $("#corruptor-div").hide();
+        }
 
         dust.render('block-info', d, function(err, out) {
           $('#file-info-blockinfo-body').html(out);
@@ -539,3 +564,14 @@
     init();
   });
 })();
+
+function corrupt_button_pressed() {
+  // get all corruptor-form values
+  const blockpoolId = $("#blockpoolId").val();
+  const blockId = $("#blockId").val();
+  const dnode_addr = $("#corruptor-dnode :selected").val();
+  const mode = $("#corruptor-mode :selected").val();
+  const perc = $("#corruptor-range").val();
+  // TODO: IMPLEMENT CORRUPTION REQUEST
+  console.log(blockpoolId+":"+blockId+"=>"+dnode_addr+"=>"+(mode === "true" ? "Clustered" : "Random")+" %"+perc);
+}

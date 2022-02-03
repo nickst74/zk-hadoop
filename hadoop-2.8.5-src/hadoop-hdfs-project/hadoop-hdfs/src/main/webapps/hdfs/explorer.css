@@ -1,0 +1,19 @@
+input#corruptor-range {
+    vertical-align: middle;
+    float: inline-end;
+}
+
+#corruptor-div select {
+    vertical-align: middle;
+    float: inline-end;
+    background-color: rgba(228, 228, 228, 0.705);
+}
+
+#corrupt-btn {
+    background-color: rgb(255, 49, 49);
+    border-style: hidden;
+}
+
+#corruptor-mode-switch {
+    float: right;
+}

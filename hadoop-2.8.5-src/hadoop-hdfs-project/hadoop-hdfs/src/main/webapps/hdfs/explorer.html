@@ -23,6 +23,8 @@
     <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap-editable.css"/>
     <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
     <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
+    <!-- my styling file -->
+    <link rel="stylesheet" type="text/css" href="explorer.css">
     <!-- Web3 resource -->
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
     
@@ -71,6 +73,24 @@
 		</select>
 	      </div>
 	      <div class="panel-body" id="file-info-blockinfo-body"></div>
+        <!-- Corruptor form -->
+        <div id="corruptor-div">
+          <hr>
+          <div class="panel-body">
+            <!-- hidden vars for later -->
+            <input type="hidden" id="blockpoolId">
+            <input type="hidden" id="blockId">
+            <!--------------------------->
+            Percentage of block to corrupt: <input type="range" id="corruptor-range" min="1" max="100" step="1">
+            <br><br>
+            Choose a corruption mode (optional): <select id="corruptor-mode" class="btn btn-default"><option value="false">Random</option><option value="true">Clustered</option></select>
+            <br><br>
+            Which Datanode should corrupt the block: <select id="corruptor-dnode" class="btn btn-default"></select>
+            <br><br>
+            <input type="button" id="corrupt-btn" class="btn btn-success" value="Corrupt" onclick="corrupt_button_pressed()">
+          </div>
+        </div>
+        <!-------------------->
 	    </div>
 	    <div class="panel panel-info" id="file-info-tail" style="display:none">
 	      <div class="panel-heading">File contents</div>
@@ -87,6 +107,8 @@
       </div>
     </div>
     <div class="container">
+      <!-- Corruptor mode switch -->
+      <div id="corruptor-mode-switch"><input type="checkbox" id="corruptor-mode-checkbox"></div>
       <div class="page-header">
 	<h1>Browse Directory</h1>
       </div>
@@ -226,7 +248,7 @@
             <th title="Last Modified">Last Modified</th>
             <th title="Replication">Replication</th>
             <th>Block Size</th>
-            <th>Block Health</th>
+            <th>File Health</th>
             <th>Name</th>
             <th></th>
           </tr>
