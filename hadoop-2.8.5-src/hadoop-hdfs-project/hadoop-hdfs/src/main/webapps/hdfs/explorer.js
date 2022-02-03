@@ -456,6 +456,8 @@
               ],
               "deferRender": true
           });
+        toggle_table_theme(document.getElementById("corruptor-mode-checkbox").checked);
+          
       });
     }).error(network_error_handler(url));
   }
@@ -557,16 +559,13 @@
     return block_status_dict;
   }
 
+  // get background theme first
+  toggle_background_theme(document.getElementById("corruptor-mode-checkbox").checked);
 
-  /* utility buttons to toggle corruptor mode and for info */
-  toggle_theme(document.getElementById("corruptor-mode-checkbox").checked);
-
+  // toggle theme main function
   function toggle_theme(flag) {
-    if(flag) {
-      document.body.classList.add("dark-mode");
-    } else {
-      document.body.classList.remove("dark-mode");
-    }
+    toggle_background_theme(flag);
+    toggle_table_theme(flag);
   }
 
   // just a listener for the corruptor mode checkbox to change the theme
@@ -658,4 +657,20 @@ function corrupt_button_pressed() {
     }
   });
 
+}
+
+/* utility functions to toggle corruptor mode*/
+function toggle_background_theme(flag) {
+  if(flag) {
+    document.body.classList.add("dark-mode");
+  } else {
+    document.body.classList.remove("dark-mode");
+  }
+}
+function toggle_table_theme(flag){
+  if(flag) {
+    document.getElementById("table-explorer").classList.add("table-dark-mode");
+  } else {
+    document.getElementById("table-explorer").classList.remove("table-dark-mode");
+  }
 }
