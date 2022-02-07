@@ -526,7 +526,9 @@ public class DFSOutputStream extends FSOutputSummer
       this.block_buffer.reset();
       tree.build();
       //System.out.println("Generated hash from endblock : "+tree.getRoot());
-      getStreamer().root_hash = tree.getRoot();
+      synchronized (getStreamer().root_hash_l) {
+        getStreamer().root_hash_l.addLast(tree.getRoot());
+			}
       setCurrentPacketToEmpty();
       enqueueCurrentPacket();
       getStreamer().setBytesCurBlock(0);
@@ -763,7 +765,9 @@ public class DFSOutputStream extends FSOutputSummer
       this.block_buffer.reset();
       tree.build();
       //System.out.println("Generated hash from flush interval "+tree.getRoot());
-      getStreamer().root_hash = tree.getRoot();
+      synchronized (getStreamer().root_hash_l) {
+        getStreamer().root_hash_l.addLast(tree.getRoot());
+			}
       getStreamer().queuePacket(currentPacket);
       currentPacket = null;
       toWaitFor = getStreamer().getLastQueuedSeqno();
@@ -940,7 +944,9 @@ public class DFSOutputStream extends FSOutputSummer
     long sleeptime = conf.getBlockWriteLocateFollowingInitialDelayMs();
     boolean fileComplete = false;
     int retries = conf.getNumBlockWriteLocateFollowingRetry();
-    this.dfsClient.getConnection().uploadHash(last.getBlockPoolId(), last.getBlockId(), getStreamer().root_hash);
+    synchronized (getStreamer().root_hash_l) {
+      this.dfsClient.getConnection().uploadHash(last.getBlockPoolId(), last.getBlockId(), getStreamer().root_hash_l.removeLast());			
+		}
     while (!fileComplete) {
       fileComplete =
           dfsClient.namenode.complete(src, dfsClient.clientName, last, fileId);
@@ -971,7 +977,7 @@ public class DFSOutputStream extends FSOutputSummer
         }
       }
     }
-    this.dfsClient.getConnection().checkResults();
+    //this.dfsClient.getConnection().checkResults();
   }
 
   @VisibleForTesting

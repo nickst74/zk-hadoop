@@ -123,7 +123,7 @@ import javax.annotation.Nonnull;
 @InterfaceAudience.Private
 class DataStreamer extends Daemon {
   static final Logger LOG = LoggerFactory.getLogger(DataStreamer.class);
-  public byte[] root_hash;
+  public LinkedList<byte[]> root_hash_l = new LinkedList<byte[]>();
 
   private class RefetchEncryptionKeyPolicy {
     private int fetchEncryptionKeyTimes = 0;
@@ -1838,7 +1838,9 @@ class DataStreamer extends Daemon {
         try {
           if(oldBlock != null){
             // upload merkle root for last transmitted block
-            this.dfsClient.getConnection().uploadHash(oldBlock.getBlockPoolId(), oldBlock.getBlockId(), this.root_hash);
+          	synchronized (this.root_hash_l) {
+              this.dfsClient.getConnection().uploadHash(oldBlock.getBlockPoolId(), oldBlock.getBlockId(), this.root_hash_l.removeFirst());
+						}
           }
           return dfsClient.namenode.addBlock(src, dfsClient.clientName,
               oldBlock, excluded, stat.getFileId(), favoredNodes,

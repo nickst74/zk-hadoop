@@ -140,6 +140,8 @@ class BPServiceActor implements Runnable {
   private long fullBlockReportLeaseId = 0;
   // just a lock for thread safety in zokrates directory
   private static ReentrantLock zok_lock = new ReentrantLock();
+  // Ethereum transactions should not be sent in parallel (see tx nonce definition and use)
+  private static ReentrantLock ethereum_lock = new ReentrantLock();
 
   BPServiceActor(InetSocketAddress nnAddr, InetSocketAddress lifelineNnAddr,
       BPOfferService bpos) {
@@ -491,11 +493,13 @@ class BPServiceActor implements Runnable {
 		  
 		  // upload block report to smart contracts
 		  try {
+		  	ethereum_lock.lock();
 			  String status = dn.getCon().upload_proofs(bpos.getBlockPoolId(), block_ids, as, bs1, bs2, cs);
 			  LOG.info("BlockReport on chain returned with status -> "+status);
 		  } catch (Exception e) {
 			  LOG.warn("Exception during on-chain BlockReport: "+e.getMessage());
 		  } finally {
+		  	ethereum_lock.unlock();
 			  // at last release the proof_gen_lock of the blockpool
 			  LOG.info("Releasing proof_gen_lock");
 			  bpos.proof_gen_in_progress.set(false);
@@ -514,11 +518,13 @@ class BPServiceActor implements Runnable {
 	  public void run() {
 	  	try {
 	  		LOG.info("Initializing my seed");
+	  		ethereum_lock.lock();
         dn.getCon().init_seed(bpos.getBlockPoolId());
         LOG.info("Seed initialized, releasing lock. No upload at first block report.");
 			} catch (Exception e) {
 				LOG.warn("Exception thrown while generating seed: "+e.getMessage());
 			} finally {
+				ethereum_lock.unlock();
         bpos.proof_gen_in_progress.set(false);
 			}
 	  }
