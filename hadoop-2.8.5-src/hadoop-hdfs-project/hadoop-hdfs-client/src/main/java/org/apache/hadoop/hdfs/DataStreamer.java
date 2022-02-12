@@ -123,6 +123,7 @@ import javax.annotation.Nonnull;
 @InterfaceAudience.Private
 class DataStreamer extends Daemon {
   static final Logger LOG = LoggerFactory.getLogger(DataStreamer.class);
+  // Queue to push merkle roots (follows same logic as the packet queue)
   public LinkedList<byte[]> root_hash_l = new LinkedList<byte[]>();
 
   private class RefetchEncryptionKeyPolicy {

@@ -39,6 +39,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   
   public static final String  DFS_CHUNK_SIZE_KEY = HdfsClientConfigKeys.DFS_CHUNK_SIZE_KEY;
   public static final int DFS_CHUNK_SIZE_DEFAULT = HdfsClientConfigKeys.DFS_CHUNK_SIZE_DEFAULT;
+  public static final String  DFS_MERKLE_TREE_HEIGHT_KEY = HdfsClientConfigKeys.DFS_MERKLE_TREE_HEIGHT_KEY;
+  public static final int DFS_MERKLE_TREE_HEIGHT_DEFAULT = HdfsClientConfigKeys.DFS_MERKLE_TREE_HEIGHT_DEFAULT;
   public static final String DFS_CHALLENGE_COUNT_KEY = "dfs.zkproofs.challenge.count";
   public static final int DFS_CHALLENGE_COUNT_DEFAULT = 1;
   public static final String  DFS_ZOKRATES_DIR_PATH_KEY = "dfs.zokrates.dir.path";

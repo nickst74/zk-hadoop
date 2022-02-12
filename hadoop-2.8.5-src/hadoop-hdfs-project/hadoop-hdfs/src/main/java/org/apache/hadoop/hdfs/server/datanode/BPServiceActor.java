@@ -80,20 +80,17 @@ import org.apache.hadoop.util.VersionUtil;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 
-import jnr.ffi.Struct.int16_t;
-
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHUNK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHUNK_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MERKLE_TREE_HEIGHT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MERKLE_TREE_HEIGHT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHALLENGE_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHALLENGE_COUNT_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ZOKRATES_DIR_PATH_KEY;
 
@@ -141,6 +138,7 @@ class BPServiceActor implements Runnable {
   // just a lock for thread safety in zokrates directory
   private static ReentrantLock zok_lock = new ReentrantLock();
   // Ethereum transactions should not be sent in parallel (see tx nonce definition and use)
+  // need static lock, many threads will be trying to send txs in parallel
   private static ReentrantLock ethereum_lock = new ReentrantLock();
 
   BPServiceActor(InetSocketAddress nnAddr, InetSocketAddress lifelineNnAddr,
@@ -362,13 +360,13 @@ class BPServiceActor implements Runnable {
   private final class MPTask implements Callable<MerkleProof> {
     private long block_id;
     private byte[] seed;
-    private int chunk_size, chunk_count, chall_count;
+    private int chunk_size, tree_height, chall_count;
 
-    MPTask(long block_id, byte[] seed, int chunk_size, int chunk_count, int chall_count) {
+    MPTask(long block_id, byte[] seed, int chunk_size, int tree_height, int chall_count) {
       this.block_id = block_id;
       this.seed = seed;
       this.chunk_size = chunk_size;
-      this.chunk_count = chunk_count;
+      this.tree_height = tree_height;
       this.chall_count = chall_count;
     }
 
@@ -382,7 +380,7 @@ class BPServiceActor implements Runnable {
         byte[] buffer = new byte[(int) dn.data.getLength(eb)];
         IOUtils.readFully(in_stream, buffer, 0, buffer.length);
         // Initialize and build MerkleTree
-        MerkleTree tree = new MerkleTree(buffer, this.chunk_size, this.chunk_count);
+        MerkleTree tree = new MerkleTree(buffer, this.chunk_size, this.tree_height);
         tree.build();
         // return MerkleProof for proof generation phase
         return tree.getMerkleProof(this.block_id, this.seed, this.chall_count);
@@ -592,7 +590,7 @@ class BPServiceActor implements Runnable {
                       tasks.add(new MPTask(replica.getBlockId(),
                                           seed,
                                           dn.getConf().getInt(DFS_CHUNK_SIZE_KEY, DFS_CHUNK_SIZE_DEFAULT),
-                                          (int) dn.getConf().getLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT)/dn.getConf().getInt(DFS_CHUNK_SIZE_KEY, DFS_CHUNK_SIZE_DEFAULT),
+                                          dn.getConf().getInt(DFS_MERKLE_TREE_HEIGHT_KEY, DFS_MERKLE_TREE_HEIGHT_DEFAULT),
                                           dn.getConf().getInt(DFS_CHALLENGE_COUNT_KEY, DFS_CHALLENGE_COUNT_DEFAULT)));
                     }
                     ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());LOG.info("Starting parallel merkle proof init");

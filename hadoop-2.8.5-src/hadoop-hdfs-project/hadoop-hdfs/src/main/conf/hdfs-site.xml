@@ -35,6 +35,13 @@
     </description>
   </property>
   <property>
+    <name>dfs.merkle.tree.height</name>
+    <value></value>
+    <description>
+        The height of the merkle trees that are constructed from the blocks.
+    </description>
+  </property>
+  <property>
     <name>dfs.zkproofs.challenge.count</name>
     <value></value>
     <description>
@@ -60,14 +67,6 @@
     <value></value>
     <description>
       The address that the client uses to communicate
-      with the blockchain.
-    </description>
-  </property>
-  <property>
-    <name>dfs.namenode.wallet.pkey</name>
-    <value></value>
-    <description>
-      The address that the namenode uses to communicate
       with the blockchain.
     </description>
   </property>

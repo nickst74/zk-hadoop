@@ -380,7 +380,7 @@
             });
           } else {
             code = 4;
-            console.warn("File not visible from fsck. Seems fishy");
+            console.warn("File not visible from fsck. Seems fishy, try reloading.");
           }
           // finally insert the right symbol
           switch (code) {

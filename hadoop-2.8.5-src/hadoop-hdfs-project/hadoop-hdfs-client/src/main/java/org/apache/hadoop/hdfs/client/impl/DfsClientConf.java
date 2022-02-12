@@ -35,6 +35,8 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CHUNK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CHUNK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_MERKLE_TREE_HEIGHT_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_MERKLE_TREE_HEIGHT_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
@@ -119,6 +121,7 @@ public class DfsClientConf {
   private final int numBlockWriteLocateFollowingRetry;
   private final int blockWriteLocateFollowingInitialDelayMs;
   private final int defaultChunkSize;
+  private final int defaultMerkleTreeHeight;
   private final long defaultBlockSize;
   private final long prefetchSize;
   private final short defaultReplication;
@@ -214,6 +217,7 @@ public class DfsClientConf {
     }
 
     defaultChunkSize = conf.getInt(DFS_CHUNK_SIZE_KEY, DFS_CHUNK_SIZE_DEFAULT);
+    defaultMerkleTreeHeight = conf.getInt(DFS_MERKLE_TREE_HEIGHT_KEY, DFS_MERKLE_TREE_HEIGHT_DEFAULT);
     defaultBlockSize = conf.getLongBytes(DFS_BLOCK_SIZE_KEY,
         DFS_BLOCK_SIZE_DEFAULT);
     defaultReplication = (short) conf.getInt(
@@ -479,6 +483,13 @@ public class DfsClientConf {
    */
   public int getDefaultChunkSize() {
     return defaultChunkSize;
+  }
+
+  /**
+   * @return the defaultMerkleTreeHeight
+   */
+  public int getDefaultMerkleTreeHeight() {
+    return defaultMerkleTreeHeight;
   }
 
   /**

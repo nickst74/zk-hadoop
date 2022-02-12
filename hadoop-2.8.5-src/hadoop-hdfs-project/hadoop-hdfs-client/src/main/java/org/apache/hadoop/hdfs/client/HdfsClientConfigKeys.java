@@ -34,6 +34,8 @@ public interface HdfsClientConfigKeys {
   String  DFS_CONTRACT_ADDRESS_KEY = "dfs.contract.address";
   String  DFS_CHUNK_SIZE_KEY = "dfs.merkle.chunksize";
   int     DFS_CHUNK_SIZE_DEFAULT = 512;
+  String  DFS_MERKLE_TREE_HEIGHT_KEY = "dfs.merkle.tree.height";
+  int     DFS_MERKLE_TREE_HEIGHT_DEFAULT = 16;
   String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";
   long    DFS_BLOCK_SIZE_DEFAULT = 128*1024*1024;
   String  DFS_REPLICATION_KEY = "dfs.replication";

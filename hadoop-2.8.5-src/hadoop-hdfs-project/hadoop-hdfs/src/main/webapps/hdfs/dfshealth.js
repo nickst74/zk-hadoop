@@ -315,9 +315,8 @@
     $.get(
       '/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo',
       guard_with_startup_progress(function (resp) {
-        console.log(resp);
         var data = workaround(resp.beans[0]);
-        console.log(data);
+        //console.log(data);
         var base = dust.makeBase(HELPERS);
         dust.render('datanode-info', base.push(data), function(err, out) {
           $('#tab-datanode').html(out);

@@ -67,11 +67,14 @@ public class MerkleTree{
      * Chunks are formed from repeating the sequence of bytes of the given block.
      * @param block The raw data
      * @param chunk_size The size of each chunk in bytes
-     * @param chunk_count The number of chunks in which the data is split
+     * @param tree_height The height of the resulting merkle tree
      */
-    public MerkleTree(byte[] block, int chunk_size, int chunk_count){
-        assert(block.length <= chunk_count * chunk_size);
-        // Just in case we have an empty block
+    public MerkleTree(byte[] block, int chunk_size, int tree_height){
+        // make no assertion about block length, just cover as much of its data as possible
+    	//assert(block.length <= chunk_count * chunk_size);
+    	assert(tree_height >= 0); // just to be safe
+    	final int chunk_count = (int) Math.pow(2, tree_height);
+  		// Just in case we have an empty block
         if(block.length == 0){
             // Initialize all zeroes
             block = new byte[chunk_size];
@@ -154,6 +157,7 @@ public class MerkleTree{
         return challenges;
     }
     
+    // produces a struct with all data required to create the zk-proofs
     public MerkleProof getMerkleProof(long block_id, byte[] seed, int chall_count) {
     	LinkedList<Integer> challenges = gen_challenges(seed, BigInteger.valueOf(block_id), chall_count);
     	LinkedList<byte[]> chunks = new LinkedList<>();
