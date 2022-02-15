@@ -1,7 +1,8 @@
 import "hashes/blake2/blake2s" as blake2
 import "hashes/utils/256bitsDirectionHelper" as multiplex
+import "utils/pack/u32/pack128" as pack
 
-def main<N,H>(u32 index, u32[8] rootDigest, private u32[N][16] chunk, private u32[H][8] siblings, private bool[H] pathDirection) -> bool:
+def main<N,H>(u32 index, field[2] rootDigest, private u32[N][16] chunk, private u32[H][8] siblings, private bool[H] pathDirection) -> bool:
   // hash selected chunk
   u32[8] hs = blake2(chunk)
   u32 count = 0
@@ -14,5 +15,5 @@ def main<N,H>(u32 index, u32[8] rootDigest, private u32[N][16] chunk, private u3
   endfor
 
   assert(count == index)
-  assert(hs == rootDigest)
+  assert([pack(hs[0..4]), pack(hs[4..8])] == rootDigest)
   return true

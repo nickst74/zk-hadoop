@@ -48,6 +48,15 @@ public class Util {
                 ((arr[offset + 2] & 0xFFL) << 8) |
                 (arr[offset + 3] & 0xFFL);
     }
+    
+    public static String[] rootToZokFields(byte[] arr) {
+    	//assert(32 <= arr.length);
+    	byte[] hb = new byte[17];
+    	byte[] lb = new byte[17];
+    	System.arraycopy(arr, 0, hb, 1, 16);
+    	System.arraycopy(arr, 16, lb, 1, 16);
+    	return new String[] {new BigInteger(hb).toString(), new BigInteger(lb).toString()};
+    }
 
     public static byte[] intsToBytes(int[] arr){
         byte[] result = new byte[arr.length * 4];

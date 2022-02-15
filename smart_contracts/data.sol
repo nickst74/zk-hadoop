@@ -74,19 +74,12 @@ contract Data {
     }
 
     
-    function get_input_vector(bytes32 root) internal pure returns(uint[10] memory) {
-        uint[10] memory input;
+    function get_input_vector(bytes32 root) internal pure returns(uint[4] memory) {
+        uint[4] memory input;
         // implemented with inline assembly for gas efficiency
-        assembly {
-            mstore(add(input, 0x120), 0x1)
-            mstore(add(input, 0x100), and(root, 0xffffffff))
-            mstore(add(input, 0xe0), and(div(root, 0x100000000), 0xffffffff))
-            mstore(add(input, 0xc0), and(div(root, 0x10000000000000000), 0xffffffff))
-            mstore(add(input, 0xa0), and(div(root, 0x1000000000000000000000000), 0xffffffff))
-            mstore(add(input, 0x80), and(div(root, 0x100000000000000000000000000000000), 0xffffffff))
-            mstore(add(input, 0x60), and(div(root, 0x10000000000000000000000000000000000000000), 0xffffffff))
-            mstore(add(input, 0x40), and(div(root, 0x1000000000000000000000000000000000000000000000000), 0xffffffff))
-            mstore(add(input, 0x20), and(div(root, 0x100000000000000000000000000000000000000000000000000000000), 0xffffffff))
+        assembly {mstore(add(input, 0x60), 0x1)
+            mstore(add(input, 0x40), and(root, 0xffffffffffffffffffffffffffffffff))
+            mstore(add(input, 0x20), and(div(root, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffffff))
         }
         return input;
     }
@@ -101,7 +94,7 @@ contract Data {
         // for every blockID check the proofs
         for(uint i = 0; i < _proofs.block_ids.length; i++) {
             uint[] memory challenges = gen_challenges(seed, _proofs.block_ids[i], num_chunks, num_chall);
-            uint[10] memory input = get_input_vector(bp_pointer.roots[_proofs.block_ids[i]]);
+            uint[4] memory input = get_input_vector(bp_pointer.roots[_proofs.block_ids[i]]);
             for(uint j = 0; j < num_chall; j++) {
                 input[0] = challenges[j];
                 if(!verifier.verifyTx(

@@ -64,7 +64,8 @@ public class MerkleProof {
     	// first goes the index
     	command.add(Integer.toString(this.challenges.pop()));
     	// second is the root hash
-    	appendToList(command, this.root);
+    	// reduced to 2 zok fields (128 bits each)
+    	command.addAll(Arrays.asList((Util.rootToZokFields(this.root))));
     	// third is the raw data
     	appendToList(command, this.chunks.pop());
     	// fourth is the siblings list
