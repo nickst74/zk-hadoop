@@ -381,6 +381,7 @@
           } else {
             code = 4;
             console.warn("File not visible from fsck. Seems fishy, try reloading.");
+            window.location.reload(); // might be better to just reload the page
           }
           // finally insert the right symbol
           switch (code) {
@@ -522,38 +523,33 @@
 
     events.forEach(event => {
       const dnode_addr = event.returnValues.datanode.toLowerCase();
+      const blockId = event.returnValues.blockId;
       // keep reports from active datanodes only
       if(bc_to_ip[dnode_addr] !== undefined) {
-        event.returnValues.blocks.forEach(blockId => {
-          // parse all blockIds reported but keep only the active ones
-          if(block_to_file[blockId] !== undefined) {
-            if(block_status_dict[blockId] === undefined) {
-              block_status_dict[blockId] = {
-                per_dnode: {},
-                total: 0,
-                wrong: 0,
-                last_update: 0
-              };
-            }
-            if (block_status_dict[blockId].per_dnode[dnode_addr] === undefined) {
-              block_status_dict[blockId].per_dnode[dnode_addr] = {
-                total: 0,
-                wrong: 0
-              };
-            }
-            block_status_dict[blockId].total++;
-            block_status_dict[blockId].per_dnode[dnode_addr].total++;
-            block_status_dict[blockId].last_update = Math.max(block_status_dict[blockId].last_update, event.returnValues.time);
+        // parse all blockIds reported but keep only the active ones
+        if(block_to_file[blockId] !== undefined) {
+          if(block_status_dict[blockId] === undefined) {
+            block_status_dict[blockId] = {
+              per_dnode: {},
+              total: 0,
+              wrong: 0,
+              last_update: 0
+            };
           }
-        });
-        //parse wrong reports
-        event.returnValues.corrupted.forEach(blockId => {
-          if(block_to_file[blockId] !== undefined) {
-            // now count the wrong reports
+          if(block_status_dict[blockId].per_dnode[dnode_addr] === undefined) {
+            block_status_dict[blockId].per_dnode[dnode_addr] = {
+              total: 0,
+              wrong: 0
+            };
+          }
+          block_status_dict[blockId].total++;
+          block_status_dict[blockId].per_dnode[dnode_addr].total++;
+          block_status_dict[blockId].last_update = Math.max(block_status_dict[blockId].last_update, event.returnValues.time);
+          if(event.returnValues.corrupt) {
             block_status_dict[blockId].wrong++;
             block_status_dict[blockId].per_dnode[dnode_addr].wrong++;
           }
-        })
+        }
       }
     });
     return block_status_dict;
@@ -581,7 +577,7 @@
                         "<li>&#x2757 : Some replicas of a block are corrupt</li>"+
                         "<li>&#x26D4 : <strong>All</strong> replicas of a block are corrupt</li>"+
                         "<li>&#x2754 : No reports found for the block/file</li>"+
-                        "<li>&#x1F47D : You might have to reload the page</li></ul></div><hr>"
+                        "<!--<li>&#x1F47D : You might have to reload the page</li>--></ul></div><hr>"
     Swal.fire({
       type: "info",
       icon: "question",

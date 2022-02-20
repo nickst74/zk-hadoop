@@ -559,6 +559,11 @@ class BPServiceActor implements Runnable {
           replicas = dn.getFSDataset().getFinalizedBlocks(bpos.getBlockPoolId());
         }
         bpos.readUnlock();
+        if(have_lock && (replicas == null || replicas.size() == 0)) {
+        	LOG.info(bpos.getBlockPoolId()+": Nothing found to report.");
+        	bpos.proof_gen_in_progress.set(false);
+        	have_lock = false;
+        }
         if(have_lock) {
         	LOG.info(bpos.getBlockPoolId()+": Found Finalized Replicas for upload : " + replicas.size());
         	try {
@@ -583,12 +588,12 @@ class BPServiceActor implements Runnable {
                                           dn.getConf().getInt(DFS_CHALLENGE_COUNT_KEY, DFS_CHALLENGE_COUNT_DEFAULT)));
               }
               ExecutorService executor = Executors.newFixedThreadPool(4); // TODO: make this configurable????
-              LOG.info(bpos.getBlockPoolId()+": Starting parallel merkle proof init");
+              LOG.info(bpos.getBlockPoolId()+": Starting parallel merkle proof generation.");
               List<Future<MerkleProof>> future_mps = executor.invokeAll(tasks);
               // after all threads have finished, start a new thread to produce and submit zk-proofs on blockchain
               ProofGenT pgt = new ProofGenT(future_mps);
               executor.shutdown();
-              LOG.info(bpos.getBlockPoolId()+": Starting proof gen Thread");
+              LOG.info(bpos.getBlockPoolId()+": Starting main ProofGenThread.");
               new Thread(pgt).start();
         		}
         	} catch (Exception e) {

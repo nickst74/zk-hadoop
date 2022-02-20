@@ -34,7 +34,7 @@ function enable_selectors() {
  * @returns Formatted Reports
  */
 function parse_events(events) {
-    const data = [];
+    const reports = {};
     const blockchain_addresses = new Set();
     events.forEach(event => {
         const bc_addr = event.returnValues.datanode.toLowerCase();
@@ -42,26 +42,29 @@ function parse_events(events) {
         const ip = bc_to_ip[bc_addr];
         const time = format_time(event.returnValues.time);
         const time_dnode = time + ' @ ' + (ip === undefined ? 'N/A' : ip) + '\n' + bc_addr;
-        event.returnValues.blocks.forEach(blockId => {
-            const file = block_to_file[blockId];
-            var blockIdx, fileBlocks;
-            if(file !== undefined) {
-                blockIdx = file_to_blocklist[file].indexOf(blockId) + 1;
-                fileBlocks = file_to_blocklist[file].length;
-            }
-            const wrong = event.returnValues.corrupted.includes(blockId);
-            data.push({
+        const blockId = event.returnValues.blockId;
+        const file = block_to_file[blockId];
+        var blockIdx, fileBlocks;
+        if(file !== undefined) {
+            blockIdx = file_to_blocklist[file].indexOf(blockId) + 1;
+            fileBlocks = file_to_blocklist[file].length;
+        }
+        const wrong = event.returnValues.corrupt;
+        if(reports[time_dnode + blockId] === undefined) {
+            reports[time_dnode + blockId] = {
                 'time_dnode': time_dnode,
                 'blockId': blockId,
                 'file': file,
                 'blockIdx': blockIdx,
                 'fileBlocks': fileBlocks,
                 'wrong': wrong
-            });
-        });
+            }; 
+        } else {
+            reports[time_dnode + blockId].wrong ||= wrong;
+        }
     });
     bc_addresses = Array.from(blockchain_addresses);
-    return data;
+    return Object.values(reports);
 }
 
 
