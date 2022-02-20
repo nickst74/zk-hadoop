@@ -1,4 +1,5 @@
 import "./merkle_proof_generic" as merkle_proof
 
 def main(u32 index, field[2] rootDigest, private u32[8][16] chunk, private u32[16][8] siblings, private bool[16] pathDirection) -> bool:
-	return merkle_proof(index, rootDigest, chunk, siblings, pathDirection)
+	assert(rootDigest == merkle_proof(index, chunk, siblings, pathDirection))
+	return true
