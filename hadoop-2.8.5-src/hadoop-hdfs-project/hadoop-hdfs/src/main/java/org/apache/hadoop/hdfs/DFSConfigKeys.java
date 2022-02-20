@@ -43,6 +43,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int DFS_MERKLE_TREE_HEIGHT_DEFAULT = HdfsClientConfigKeys.DFS_MERKLE_TREE_HEIGHT_DEFAULT;
   public static final String DFS_CHALLENGE_COUNT_KEY = "dfs.zkproofs.challenge.count";
   public static final int DFS_CHALLENGE_COUNT_DEFAULT = 1;
+  public static final String DFS_MERKLE_PROOF_THREADS_KEY = "dfs.merkle.proof.threads";
+  public static final int DFS_MERKLE_PROOF_THREADS_DEFAULT = 4;
+  public static final String DFS_ZOKRATES_THREADS_KEY = "dfs.zokrates.threads";
+  public static final int DFS_ZOKRATES_THREADS_DEFAULT = 1;
   public static final String  DFS_ZOKRATES_DIR_PATH_KEY = "dfs.zokrates.dir.path";
 
   public static final String  DFS_BLOCK_SIZE_KEY =

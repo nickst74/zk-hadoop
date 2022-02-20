@@ -36,16 +36,30 @@
   </property>
   <property>
     <name>dfs.merkle.tree.height</name>
-    <value></value>
+    <value>16</value>
     <description>
         The height of the merkle trees that are constructed from the blocks.
     </description>
   </property>
   <property>
     <name>dfs.zkproofs.challenge.count</name>
-    <value></value>
+    <value>1</value>
     <description>
         The number of challenges per block to be submitted on block reporting.
+    </description>
+  </property>
+  <property>
+    <name>dfs.merkle.proof.threads</name>
+    <value>4</value>
+    <description>
+        The number of threads to utilize for MerkleProof generation during block report (default: 4).
+    </description>
+  </property>
+  <property>
+    <name>dfs.zokrates.threads</name>
+    <value>1</value>
+    <description>
+        The number of instances of ZoKrates that can run in parallel (need to be careful due to memory usage, default: 1).
     </description>
   </property>
   <property>

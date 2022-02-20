@@ -91,6 +91,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MERKLE_TREE_HEIGHT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MERKLE_TREE_HEIGHT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHALLENGE_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHALLENGE_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MERKLE_PROOF_THREADS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MERKLE_PROOF_THREADS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ZOKRATES_THREADS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ZOKRATES_THREADS_DEFAULT;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ZOKRATES_DIR_PATH_KEY;
 
@@ -416,7 +420,7 @@ class BPServiceActor implements Runnable {
 			// but make sure that we are the only BPActor that is running ZoKrates (resource issues)
 			try {
 				synchronized (dn) {
-					ExecutorService executor = Executors.newFixedThreadPool(2); // TODO: Make this configurable!!!!
+					ExecutorService executor = Executors.newFixedThreadPool(dn.getConf().getInt(DFS_ZOKRATES_THREADS_KEY, DFS_ZOKRATES_THREADS_DEFAULT));
 					// create a runnable for every block and wait until all finish and submit their proofs
 					for (MerkleProof mp : mps) {
 						if(mp != null) {
@@ -587,7 +591,7 @@ class BPServiceActor implements Runnable {
                                           dn.getConf().getInt(DFS_MERKLE_TREE_HEIGHT_KEY, DFS_MERKLE_TREE_HEIGHT_DEFAULT),
                                           dn.getConf().getInt(DFS_CHALLENGE_COUNT_KEY, DFS_CHALLENGE_COUNT_DEFAULT)));
               }
-              ExecutorService executor = Executors.newFixedThreadPool(4); // TODO: make this configurable????
+              ExecutorService executor = Executors.newFixedThreadPool(dn.getConf().getInt(DFS_MERKLE_PROOF_THREADS_KEY, DFS_MERKLE_PROOF_THREADS_DEFAULT));
               LOG.info(bpos.getBlockPoolId()+": Starting parallel merkle proof generation.");
               List<Future<MerkleProof>> future_mps = executor.invokeAll(tasks);
               // after all threads have finished, start a new thread to produce and submit zk-proofs on blockchain
