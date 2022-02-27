@@ -125,6 +125,24 @@ class DataStreamer extends Daemon {
   static final Logger LOG = LoggerFactory.getLogger(DataStreamer.class);
   // Queue to push merkle roots (follows same logic as the packet queue)
   public LinkedList<byte[]> root_hash_l = new LinkedList<byte[]>();
+  
+  public void push_root_hash(byte[] root) {
+  	synchronized (this.root_hash_l) {
+			this.root_hash_l.add(root);
+		}
+  }
+  
+  private byte[] pop_root_hash() {
+  	synchronized (this.root_hash_l) {
+			return this.root_hash_l.pop();
+		}
+  }
+  
+  public byte[] remove_last_hash() {
+  	synchronized (this.root_hash_l) {
+			return this.root_hash_l.removeLast();
+		}
+  }
 
   private class RefetchEncryptionKeyPolicy {
     private int fetchEncryptionKeyTimes = 0;
@@ -1839,9 +1857,7 @@ class DataStreamer extends Daemon {
         try {
           if(oldBlock != null){
             // upload merkle root for last transmitted block
-          	synchronized (this.root_hash_l) {
-              this.dfsClient.getConnection().uploadHash(oldBlock.getBlockPoolId(), oldBlock.getBlockId(), this.root_hash_l.removeFirst());
-						}
+            this.dfsClient.getConnection().uploadHash(oldBlock.getBlockPoolId(), oldBlock.getBlockId(), pop_root_hash());
           }
           return dfsClient.namenode.addBlock(src, dfsClient.clientName,
               oldBlock, excluded, stat.getFileId(), favoredNodes,

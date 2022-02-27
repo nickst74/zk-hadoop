@@ -526,9 +526,7 @@ public class DFSOutputStream extends FSOutputSummer
       tree.build();
       //System.out.println("Generated hash from endblock : "+tree.getRoot());
       // add merkle root to queue for later (when block id is known)
-      synchronized (getStreamer().root_hash_l) {
-        getStreamer().root_hash_l.addLast(tree.getRoot());
-			}
+      getStreamer().push_root_hash(tree.getRoot());
       setCurrentPacketToEmpty();
       enqueueCurrentPacket();
       getStreamer().setBytesCurBlock(0);
@@ -765,9 +763,7 @@ public class DFSOutputStream extends FSOutputSummer
       tree.build();
       //System.out.println("Generated hash from flush interval "+tree.getRoot());
       // add merkle root to queue for later (when block id is known)
-      synchronized (getStreamer().root_hash_l) {
-        getStreamer().root_hash_l.addLast(tree.getRoot());
-			}
+      getStreamer().push_root_hash(tree.getRoot());
       getStreamer().queuePacket(currentPacket);
       currentPacket = null;
       toWaitFor = getStreamer().getLastQueuedSeqno();
@@ -945,9 +941,9 @@ public class DFSOutputStream extends FSOutputSummer
     boolean fileComplete = false;
     int retries = conf.getNumBlockWriteLocateFollowingRetry();
     // remove root hash of last block from list and upload
-    synchronized (getStreamer().root_hash_l) {
-      this.dfsClient.getConnection().uploadHash(last.getBlockPoolId(), last.getBlockId(), getStreamer().root_hash_l.removeLast());
-		}
+    this.dfsClient.getConnection().uploadHash(last.getBlockPoolId(), last.getBlockId(), getStreamer().remove_last_hash());
+    // wait for all the merkle root uploads to complete before completing and finalizing the file
+    this.dfsClient.getConnection().waitForUploads();
     while (!fileComplete) {
       fileComplete =
           dfsClient.namenode.complete(src, dfsClient.clientName, last, fileId);

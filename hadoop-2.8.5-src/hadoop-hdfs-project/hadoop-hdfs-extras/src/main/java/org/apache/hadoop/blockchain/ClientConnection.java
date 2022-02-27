@@ -1,12 +1,17 @@
 package org.apache.hadoop.blockchain;
 
 import java.math.BigInteger;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.web3j.crypto.Hash;
-
+import org.apache.hadoop.merkle_trees.Pair;
 import org.apache.hadoop.merkle_trees.Util;
 
 public class ClientConnection extends Connection {
+	
+		private Thread uploadThread = null;
+		private BlockingQueue<Pair<Pair<String, Long>, byte[]>> upload_queue = new LinkedBlockingQueue<Pair<Pair<String,Long>,byte[]>>();
 
     public ClientConnection(String blockhain, String wallet_pk, String contract_address) {
         super(blockhain, wallet_pk, contract_address);
@@ -17,26 +22,32 @@ public class ClientConnection extends Connection {
      */
     private class UploadHashT implements Runnable {
     	
-    	String bp_id;
-    	long block_id;
-    	byte[] root;
-    	
-    	public UploadHashT(String bp_id, long block_id, byte[] root) {
-				this.bp_id = bp_id;
-				this.block_id = block_id;
-				this.root = root;
-			}
-    	
 			@Override
 			public void run() {
-				// Calls should not be parallel so we dont get out of order tx sent (see tx nonce definition)
-				synchronized (contract_wrapper) {
-					System.out.println("Uploading hash for block: "+block_id+" -> 0x" + Util.bytesToHex(root));
-	        try {
-						contract_wrapper.add_digest(Hash.sha3(bp_id.getBytes()), BigInteger.valueOf(block_id), root).send();
-					} catch (Exception e) {
-						System.out.println("EXCEPTION for block " + Long.toString(block_id) + ": " + e.getMessage());
+				try {
+					// just poll on queue for new hashes to upload
+					while (true) {
+						Pair<Pair<String, Long>, byte[]> toUpload = upload_queue.take();
+						// terminate when you recieve pair with null value (consider all hashes uploaded)
+						if(toUpload.getFirst() == null || toUpload.getSecond() == null) {
+							break;
+						}
+						String bp_id = toUpload.getFirst().getFirst();
+						Long block_id = toUpload.getFirst().getSecond();
+						byte[] root = toUpload.getSecond();
+						// Calls should not be parallel so we dont get out of order tx sent (see tx nonce definition)
+						synchronized (contract_wrapper) {
+							System.out.println("Uploading hash for block: "+block_id+" -> 0x" + Util.bytesToHex(root));
+			        try {
+								contract_wrapper.add_digest(Hash.sha3(bp_id.getBytes()), BigInteger.valueOf(block_id), root).send();
+							} catch (Exception e) {
+								System.out.println("EXCEPTION for block " + Long.toString(block_id) + ": " + e.getMessage());
+							}
+						}
 					}
+				} catch (Exception e) {
+					// oh well, we tried...
+					System.out.println("Upload hash thread got interupted. Operation failed.");
 				}
 			}
     	
@@ -52,7 +63,23 @@ public class ClientConnection extends Connection {
      */
     public void uploadHash(String bp_id, long block_id, byte[] root){
     	// just start a thread to handle it and return normal execution
-    	new Thread(new UploadHashT(bp_id, block_id, root)).start();
+    	this.upload_queue.add(new Pair<Pair<String,Long>, byte[]>(new Pair<String, Long>(bp_id, block_id), root));
+    	if(this.uploadThread == null) {
+    		this.uploadThread = new Thread(new UploadHashT());
+    		this.uploadThread.start();
+    	}
+    }
+    
+    public void waitForUploads() {
+    	// throw dummy item to the queue and wait for the uploadThread to terminate
+    	this.upload_queue.add(new Pair<Pair<String,Long>, byte[]>(null, null));
+    	if(this.uploadThread != null) {
+    		try {
+					this.uploadThread.join();
+				} catch (InterruptedException e) {
+					// nothing really, just leave it be
+				}
+    	}
     }
     
 }
