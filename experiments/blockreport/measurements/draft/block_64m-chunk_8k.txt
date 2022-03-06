@@ -1,0 +1,13 @@
+seed ->			15122			15244			15110
+
+merkle-proof -> 		20626 (8G 1 proof)	22210 (8G 2 proofs)	22509 (8G 4 proofs)
+
+availability_after -> 		35751			37461			37623
+
+
+zk_proofs -> (4 threads)	4913969		9849928		19699238
+
+
+finish ->			4950213		9887695		19737882
+
+(6.9 GB per thread)

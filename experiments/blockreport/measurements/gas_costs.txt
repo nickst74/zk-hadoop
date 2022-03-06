@@ -1,0 +1,11 @@
+seed generation: 27205 gas (42205 gas on first time only)
+
+1 proof :  275425 gas
+2 proofs:  523133 gas
+4 proofs:  1018521 gas
+8 proofs:  1996450 gas
+16 proofs: -------
+
+
+
+upload hash: 42679 gas
