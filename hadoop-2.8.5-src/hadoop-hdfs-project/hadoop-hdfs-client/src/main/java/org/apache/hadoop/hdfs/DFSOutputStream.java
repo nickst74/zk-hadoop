@@ -131,6 +131,7 @@ public class DFSOutputStream extends FSOutputSummer
   private int writePacketSize;
   // a buffer used to store the block data
   protected ByteArrayOutputStream block_buffer;
+  protected long mtree_total_time = 0;
 
   /** Use {@link ByteArrayManager} to create buffer for non-heartbeat packets.*/
   protected DFSPacket createPacket(int packetSize, int chunksPerPkt,
@@ -519,11 +520,13 @@ public class DFSOutputStream extends FSOutputSummer
    */
   protected void endBlock() throws IOException {
     if (getStreamer().getBytesCurBlock() == blockSize) {
+    	long mtree_start = System.currentTimeMillis();
       MerkleTree tree = new MerkleTree(this.block_buffer.toByteArray(),
       																this.dfsClient.getConf().getDefaultChunkSize(),
       																this.dfsClient.getConf().getDefaultMerkleTreeHeight());
       this.block_buffer.reset();
       tree.build();
+      mtree_total_time += System.currentTimeMillis() - mtree_start;
       //System.out.println("Generated hash from endblock : "+tree.getRoot());
       // add merkle root to queue for later (when block id is known)
       getStreamer().push_root_hash(tree.getRoot());
@@ -756,11 +759,13 @@ public class DFSOutputStream extends FSOutputSummer
       //
       // If there is data in the current buffer, send it across
       //
+      long mtree_start = System.currentTimeMillis();
       MerkleTree tree = new MerkleTree(this.block_buffer.toByteArray(),
 														      		this.dfsClient.getConf().getDefaultChunkSize(),
 																			this.dfsClient.getConf().getDefaultMerkleTreeHeight());
       this.block_buffer.reset();
       tree.build();
+      mtree_total_time += System.currentTimeMillis() - mtree_start;
       //System.out.println("Generated hash from flush interval "+tree.getRoot());
       // add merkle root to queue for later (when block id is known)
       getStreamer().push_root_hash(tree.getRoot());
@@ -943,7 +948,10 @@ public class DFSOutputStream extends FSOutputSummer
     // remove root hash of last block from list and upload
     this.dfsClient.getConnection().uploadHash(last.getBlockPoolId(), last.getBlockId(), getStreamer().remove_last_hash());
     // wait for all the merkle root uploads to complete before completing and finalizing the file
+    //long wait_start = System.currentTimeMillis();
     this.dfsClient.getConnection().waitForUploads();
+    //System.out.println("Time spent waiting until transaction sending completes: "+Long.toString(System.currentTimeMillis()-wait_start));
+    System.out.println("Time spent building merkle trees: "+Long.toString(mtree_total_time));
     while (!fileComplete) {
       fileComplete =
           dfsClient.namenode.complete(src, dfsClient.clientName, last, fileId);

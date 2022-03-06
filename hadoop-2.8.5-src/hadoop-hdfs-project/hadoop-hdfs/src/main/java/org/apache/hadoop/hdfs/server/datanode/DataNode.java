@@ -19,7 +19,9 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 // config key imports for merkle proofs and blockchain connection
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKCHAIN_ADDRESS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_WALLET_PK_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKCHAIN_CHAINID_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_WALLET_PASSWORD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_WALLET_PATH_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CONTRACT_ADDRESS_KEY;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT;
@@ -235,7 +237,6 @@ import com.google.protobuf.BlockingService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.blockchain.DatanodeConnection;
 
 /**********************************************************
@@ -410,7 +411,7 @@ public class DataNode extends ReconfigurableBase
 
   private ScheduledThreadPoolExecutor metricsLoggerTimer;
 
-  private final DatanodeConnection con;
+  private DatanodeConnection con = null;
 
   /**
    * Creates a dummy DataNode for testing purpose.
@@ -419,7 +420,18 @@ public class DataNode extends ReconfigurableBase
   @InterfaceAudience.LimitedPrivate("HDFS")
   DataNode(final Configuration conf) {
     super(conf);
-    this.con = new DatanodeConnection(conf.get(DFS_BLOCKCHAIN_ADDRESS_KEY), conf.get(DFS_DATANODE_WALLET_PK_KEY));
+    try {
+			this.con = new DatanodeConnection(
+					conf.get(DFS_BLOCKCHAIN_ADDRESS_KEY),
+					conf.get(DFS_DATANODE_WALLET_PASSWORD_KEY),
+					conf.get(DFS_DATANODE_WALLET_PATH_KEY),
+      		Long.parseLong(conf.get(DFS_BLOCKCHAIN_CHAINID_KEY))
+					);
+		} catch (Exception e) {
+			// well... maybe exit?
+			System.out.println("Failed to initialize credentials or establish connection to geth client...");
+			System.exit(1);
+		}
     this.blockScanner = new BlockScanner(this, conf);
     this.tracer = createTracer(conf);
     this.tracerConfigurationManager =
@@ -444,7 +456,18 @@ public class DataNode extends ReconfigurableBase
            final List<StorageLocation> dataDirs,
            final SecureResources resources) throws IOException {
     super(conf);
-    this.con = new DatanodeConnection(conf.get(DFS_BLOCKCHAIN_ADDRESS_KEY), conf.get(DFS_DATANODE_WALLET_PK_KEY));
+    try {
+			this.con = new DatanodeConnection(
+					conf.get(DFS_BLOCKCHAIN_ADDRESS_KEY),
+					conf.get(DFS_DATANODE_WALLET_PASSWORD_KEY),
+					conf.get(DFS_DATANODE_WALLET_PATH_KEY),
+      		Long.parseLong(conf.get(DFS_BLOCKCHAIN_CHAINID_KEY))
+					);
+		} catch (Exception e) {
+			// well... maybe exit?
+			System.out.println("Failed to initialize credentials or establish connection to geth client...");
+			System.exit(1);
+		}
     this.tracer = createTracer(conf);
     this.tracerConfigurationManager =
         new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);

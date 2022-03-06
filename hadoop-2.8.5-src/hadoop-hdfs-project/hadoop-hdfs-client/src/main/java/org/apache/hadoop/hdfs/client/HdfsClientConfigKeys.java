@@ -30,7 +30,9 @@ public interface HdfsClientConfigKeys {
   // Some config keys for the merkle proofs
   // and connection to blockchain
   String  DFS_BLOCKCHAIN_ADDRESS_KEY = "dfs.blockchain.address";
-  String  DFS_CLIENT_WALLET_PK_KEY = "dfs.client.wallet.pkey";
+  String	DFS_BLOCKCHAIN_CHAINID_KEY = "dfs.blockchain.chainId";
+  String  DFS_CLIENT_WALLET_PASSWORD_KEY = "dfs.client.wallet.password";
+  String  DFS_CLIENT_WALLET_PATH_KEY = "dfs.client.wallet.path";
   String  DFS_CONTRACT_ADDRESS_KEY = "dfs.contract.address";
   String  DFS_CHUNK_SIZE_KEY = "dfs.merkle.chunksize";
   int     DFS_CHUNK_SIZE_DEFAULT = 512;

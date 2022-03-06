@@ -34,7 +34,9 @@ import org.apache.hadoop.http.HttpConfig;
 public class DFSConfigKeys extends CommonConfigurationKeys {
   // config keys for connection to blockchain
   public static final String  DFS_BLOCKCHAIN_ADDRESS_KEY = HdfsClientConfigKeys.DFS_BLOCKCHAIN_ADDRESS_KEY;
-  public static final String  DFS_DATANODE_WALLET_PK_KEY = "dfs.datanode.wallet.pkey";
+  public static final String	DFS_BLOCKCHAIN_CHAINID_KEY = HdfsClientConfigKeys.DFS_BLOCKCHAIN_CHAINID_KEY;
+  public static final String  DFS_DATANODE_WALLET_PASSWORD_KEY = "dfs.datanode.wallet.password";
+  public static final String  DFS_DATANODE_WALLET_PATH_KEY = "dfs.datanode.wallet.path";
   public static final String  DFS_CONTRACT_ADDRESS_KEY = HdfsClientConfigKeys.DFS_CONTRACT_ADDRESS_KEY;
   
   public static final String  DFS_CHUNK_SIZE_KEY = HdfsClientConfigKeys.DFS_CHUNK_SIZE_KEY;

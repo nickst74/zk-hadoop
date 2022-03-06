@@ -70,6 +70,13 @@
     </description>
   </property>
   <property>
+    <name>dfs.blockchain.chainId</name>
+    <value></value>
+    <description>
+      The networkId of the blockchain.
+    </description>
+  </property>
+  <property>
     <name>dfs.contract.address</name>
     <value></value>
     <description>
@@ -77,19 +84,31 @@
     </description>
   </property>
   <property>
-    <name>dfs.client.wallet.pkey</name>
+    <name>dfs.client.wallet.password</name>
     <value></value>
     <description>
-      The address that the client uses to communicate
-      with the blockchain.
+      Client wallet password.
     </description>
   </property>
   <property>
-    <name>dfs.datanode.wallet.pkey</name>
+    <name>dfs.client.wallet.path</name>
     <value></value>
     <description>
-      The address that the datanode uses to communicate
-      with the blockchain.
+      Path to client wallet file.
+    </description>
+  </property>
+  <property>
+    <name>dfs.datanode.wallet.password</name>
+    <value></value>
+    <description>
+      Datanode wallet password.
+    </description>
+  </property>
+  <property>
+    <name>dfs.datanode.wallet.path</name>
+    <value></value>
+    <description>
+      Path to datanode wallet file.
     </description>
   </property>
   <property>

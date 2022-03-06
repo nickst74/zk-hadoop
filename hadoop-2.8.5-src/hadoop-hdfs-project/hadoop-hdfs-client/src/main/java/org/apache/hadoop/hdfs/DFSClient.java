@@ -28,7 +28,9 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERV
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BLOCKCHAIN_ADDRESS_KEY;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WALLET_PK_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BLOCKCHAIN_CHAINID_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WALLET_PASSWORD_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WALLET_PATH_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CONTRACT_ADDRESS_KEY;
 
 import java.io.BufferedOutputStream;
@@ -242,7 +244,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private final int smallBufferSize;
   private final long serverDefaultsValidityPeriod;
   
-  private final ClientConnection con;
+  private ClientConnection con = null;
   
   public ClientConnection getConnection() {
 	  return this.con;
@@ -399,10 +401,18 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
     // initialize the client connection
-    this.con = new ClientConnection(
-    		conf.get(DFS_BLOCKCHAIN_ADDRESS_KEY),
-    		conf.get(DFS_CLIENT_WALLET_PK_KEY),
-    		conf.get(DFS_CONTRACT_ADDRESS_KEY));
+    try {
+      this.con = new ClientConnection(
+      		conf.get(DFS_BLOCKCHAIN_ADDRESS_KEY),
+      		conf.get(DFS_CLIENT_WALLET_PASSWORD_KEY),
+      		conf.get(DFS_CLIENT_WALLET_PATH_KEY),
+      		Long.parseLong(conf.get(DFS_BLOCKCHAIN_CHAINID_KEY)),
+      		conf.get(DFS_CONTRACT_ADDRESS_KEY));
+		} catch (Exception e) {
+			// well... maybe exit?
+			System.out.println("Failed to initialize credentials or establish connection to geth client...");
+			System.exit(1);
+		}
   }
 
   /**

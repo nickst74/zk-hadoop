@@ -399,6 +399,13 @@ class BPServiceActor implements Runnable {
   class ProofGenT implements Runnable {
 
   	private List<MerkleProof> mps;
+  	//private List<CompletableFuture<TransactionReceipt>> ftrs = new ArrayList<CompletableFuture<TransactionReceipt>>();
+  	
+  	//protected void add_ftr(CompletableFuture<TransactionReceipt> ftr) {
+  	//	synchronized (this.ftrs) {
+		//		ftrs.add(ftr);
+		//	}
+  	//}
   	
   	public ProofGenT(List<Future<MerkleProof>> fmps) {
 			this.mps = new ArrayList<MerkleProof>();
@@ -416,6 +423,7 @@ class BPServiceActor implements Runnable {
   	
 		@Override
 		public void run() {
+			long zkproof_start = System.currentTimeMillis();
 			// now we can start generationg the zk-proofs and submit them through to our smart contract
 			// but make sure that we are the only BPActor that is running ZoKrates (resource issues)
 			try {
@@ -435,6 +443,19 @@ class BPServiceActor implements Runnable {
 			} catch (Exception e) {
 				LOG.warn(bpos.getBlockPoolId()+": ZK-Proofs generation interrupted -> "+e.getMessage());
 			} finally {
+				// iterate for all tx receipts to make sure everything was mined/rejected before releasing lock
+				//int total = 0;
+				//for (CompletableFuture<TransactionReceipt> ftr : this.ftrs) {
+				//	total++;
+				//	try {
+				//		ftr.get();
+				//	} catch (Exception e2) {
+				//		/* nothing */
+				//	}
+				//}
+				//LOG.info(bpos.getBlockPoolId()+": Proofs submitted of a total of "+Integer.toString(total)+" blocks");
+    		LOG.info("<blockreport_zkproof_generation_time>:"+Long.toString(System.currentTimeMillis()-zkproof_start));
+    		LOG.info("<blockreport_upload_complete_at>:"+Long.toString(System.currentTimeMillis()));
 				// reset flag at the end of the report
 				bpos.proof_gen_in_progress.set(false);
 			}
@@ -514,8 +535,10 @@ class BPServiceActor implements Runnable {
 				}
 				try {
 					// at last submit the proofs for the block
-					String status = dn.getCon().upload_proofs(bpos.getBlockPoolId(), mp.getBlock_id(), numbers);
-					LOG.info(bpos.getBlockPoolId()+"_"+mp.getBlock_id()+"BlockReport on chain returned with status -> "+status);
+					dn.getCon().upload_proof(bpos.getBlockPoolId(), mp.getBlock_id(), numbers);
+					//add_ftr(dn.getCon().upload_proofs(bpos.getBlockPoolId(), mp.getBlock_id(), numbers));
+					//String status = dn.getCon().upload_proofs(bpos.getBlockPoolId(), mp.getBlock_id(), numbers);
+					//LOG.info(bpos.getBlockPoolId()+"_"+mp.getBlock_id()+"BlockReport on chain returned with status -> "+status);
 				} catch (Exception e) {
 					LOG.warn(bpos.getBlockPoolId()+"_"+mp.getBlock_id()+": Exception when uploading proofs -> "+e.getMessage());
 				}				
@@ -542,6 +565,7 @@ class BPServiceActor implements Runnable {
       boolean have_lock = false;
       try {
         LOG.info("Started block report Thread for BlockPool: "+bpos.getBlockPoolId());
+    		LOG.info("<blockreport_start_at>:"+Long.toString(System.currentTimeMillis()));
         final ArrayList<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>();
 
         // Flush any block information that precedes the block report. Otherwise
@@ -574,8 +598,10 @@ class BPServiceActor implements Runnable {
         		byte[] seed = null;
         		try {
 							// create and retrieve seed
+        			long seed_start = System.currentTimeMillis(); // before creating seed
         			dn.getCon().create_seed(bpos.getBlockPoolId());
         			seed = dn.getCon().get_seed(bpos.getBlockPoolId());
+        			LOG.info("<seed_creation_time>:"+Long.toString(System.currentTimeMillis()-seed_start));
         			LOG.info(bpos.getBlockPoolId()+": Got my seed -> "+Util.bytesToHex(seed));
 						} catch (Exception e) {
 							LOG.warn(bpos.getBlockPoolId()+": Exception while fetching seed (aborting) -> "+e.getMessage());
@@ -583,6 +609,7 @@ class BPServiceActor implements Runnable {
 							seed = null;
 						}
         		if(seed != null) {
+        			long mproofs_start = System.currentTimeMillis();
         			Collection<Callable<MerkleProof>> tasks = new ArrayList<>();
         			for(FinalizedReplica replica : replicas){
                       tasks.add(new MPTask(replica.getBlockId(),
@@ -594,6 +621,7 @@ class BPServiceActor implements Runnable {
               ExecutorService executor = Executors.newFixedThreadPool(dn.getConf().getInt(DFS_MERKLE_PROOF_THREADS_KEY, DFS_MERKLE_PROOF_THREADS_DEFAULT));
               LOG.info(bpos.getBlockPoolId()+": Starting parallel merkle proof generation.");
               List<Future<MerkleProof>> future_mps = executor.invokeAll(tasks);
+        			LOG.info("<merkle_proofs_creation_time>:"+Long.toString(System.currentTimeMillis()-mproofs_start));
               // after all threads have finished, start a new thread to produce and submit zk-proofs on blockchain
               ProofGenT pgt = new ProofGenT(future_mps);
               executor.shutdown();
@@ -657,6 +685,7 @@ class BPServiceActor implements Runnable {
           // Log the block report processing stats from Datanode perspective
           long brSendCost = monotonicNow() - brSendStartTime;
           long brCreateCost = brSendStartTime - brCreateStartTime;
+          LOG.info("<block_report_time>:"+Long.toString(brSendCost+brCreateCost));
           dn.getMetrics().addBlockReport(brSendCost);
           final int nCmds = cmds.size();
           LOG.info((success ? "S" : "Uns") +
