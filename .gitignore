@@ -9,3 +9,6 @@ target/
 
 # VSCode
 .vscode
+
+#PyCharm
+.idea
