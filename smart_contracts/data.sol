@@ -9,7 +9,7 @@ contract Data {
 
     // Need to be instantiated on deployment
     uint constant num_chall = 1;     // challenges/block
-    uint constant num_chunks = 65536;    // chunks/block
+    uint constant num_chunks = 8192;    // chunks/block
 
     struct bp_struct {
         mapping (uint=>bytes32) roots;
@@ -48,7 +48,6 @@ contract Data {
 
     // generate a series of _count random numbers using a seed
     function gen_challenges(bytes memory _seed, uint _block_id) internal pure returns (uint[num_chall] memory) {
-        //require(num_chall > 0);
         uint[num_chall] memory challenges;
         uint tmp = uint(keccak256(abi.encodePacked(_block_id, _seed)));
         challenges[0] = tmp % num_chunks;
@@ -60,10 +59,10 @@ contract Data {
     }
 
     
-    function get_input_vector(bytes32 root) internal pure returns(uint[4] memory) {
-        uint[4] memory input;
+    function get_input_vector(bytes32 root) internal pure returns(uint[5] memory) {
+        uint[5] memory input;
         // implemented with inline assembly for gas efficiency
-        assembly {mstore(add(input, 0x60), 0x1)
+        assembly {
             mstore(add(input, 0x40), and(root, 0xffffffffffffffffffffffffffffffff))
             mstore(add(input, 0x20), and(div(root, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffffff))
         }
@@ -72,7 +71,6 @@ contract Data {
 
     
     function verify(bytes32 _bp_id, uint _block_id, uint[] memory numbers) external{
-        //require(numbers == num_chall * 8);
         // first get a reference to the blockpool storage
         bp_struct storage bp_pointer = bp_data[_bp_id];
         // grab the seed and generate challenges
@@ -83,7 +81,9 @@ contract Data {
         }
         uint[num_chall] memory challenges = gen_challenges(abi.encodePacked(seed, _bp_id, tx.origin), _block_id);
         // get the input vector for the verification
-        uint[4] memory input = get_input_vector(bp_pointer.roots[_block_id]);
+        uint[5] memory input = get_input_vector(bp_pointer.roots[_block_id]);
+        input[3] = challenges[0];
+        input[4] = 1;
         for(uint i = 0; i < num_chall; i++) {
             input[0] = challenges[i];
             Verifier.Proof memory proof;
@@ -91,7 +91,6 @@ contract Data {
             proof.b = Pairing.G2Point([numbers[i*8+2], numbers[i*8+3]], [numbers[i*8+4], numbers[i*8+5]]);
             proof.c = Pairing.G1Point(numbers[i*8+6], numbers[i*8+7]);
             if(!verifier.verifyTx(proof, input)) {
-                // maybe emit actual time and sort on client (will slow down ui for sure)???
                 emit BlockReport(_bp_id, tx.origin, time, _block_id, true);
                 return;
             }

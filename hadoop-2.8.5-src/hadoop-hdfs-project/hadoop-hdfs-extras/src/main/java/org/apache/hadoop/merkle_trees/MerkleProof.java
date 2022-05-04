@@ -12,6 +12,7 @@ public class MerkleProof {
 
     private final long block_id;
     private final byte[] root;
+    private final int randomness;
     private final LinkedList<Integer> challenges;
     private final LinkedList<byte[]> chunks;
     private final LinkedList<List<byte[]>> siblings;
@@ -31,6 +32,7 @@ public class MerkleProof {
     			challenges.size() == paths.size());
     	this.block_id = block_id;
     	this.root = root;
+    	this.randomness = challenges.get(0);
     	this.challenges = challenges;
     	this.chunks = chunks;
     	this.siblings = siblings;
@@ -38,8 +40,8 @@ public class MerkleProof {
     }
     
     public long getBlock_id() {
-		return this.block_id;
-	}
+    	return this.block_id;
+    }
     
     public boolean isEmpty() {
     	return this.challenges.isEmpty();
@@ -66,13 +68,15 @@ public class MerkleProof {
     	// second is the root hash
     	// reduced to 2 zok fields (128 bits each)
     	command.addAll(Arrays.asList((Util.rootToZokFields(this.root))));
-    	// third is the raw data
+    	// third is the nullifier
+    	command.add(Integer.toString(this.randomness));
+    	// fourth is the raw data
     	appendToList(command, this.chunks.pop());
-    	// fourth is the siblings list
+    	// fifth is the siblings list
     	for(byte[] sibling : this.siblings.pop()) {
     		appendToList(command, sibling);
     	}
-    	// fifth and last is the path
+    	// and last is the path
     	for(boolean b : this.paths.pop()) {
     		command.add(b ? "1" : "0");
     	}

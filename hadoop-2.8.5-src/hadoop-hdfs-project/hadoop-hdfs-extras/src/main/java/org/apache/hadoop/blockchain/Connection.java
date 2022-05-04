@@ -36,7 +36,7 @@ public class Connection {
 
     public void connect(String contract_address){
         try {
-            this.contract_wrapper = Data.load(contract_address, this.web3j, this.txManager, DefaultGasProvider.GAS_PRICE, BigInteger.valueOf(2000000));
+            this.contract_wrapper = Data.load(contract_address, this.web3j, this.txManager, DefaultGasProvider.GAS_PRICE, BigInteger.valueOf(4500000));
         } catch (Exception e) {
             System.out.println("Failed to resolve smart contract address. Please ensure its format is valid.");
             System.exit(1);

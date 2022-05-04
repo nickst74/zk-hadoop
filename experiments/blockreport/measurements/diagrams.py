@@ -19,13 +19,13 @@ source_file = "zkproofs.csv"
 #x = ["512", "1k", "2k", "4k", "8k"]
 #y = [1.2, 1.6, 2.3, 3.7, 6.9]
 # gas cost
-#x = ["1", "2", "4", "8"]
-#y = [275425, 523133, 1018521, 1996450]
+x = ["1", "2", "4", "8"]
+y = [284749, 541795, 1055776, 2083932]
 #plt.bar(x, y, width=0.4)
 #plt.show()
 
 # and something interesting
-x = ["chunk_1k\n8_proofs", "chunk_2k\n4_proofs", "chunk_4k\n2_proofs", "chunk_8k\n1_proof"]
-y = [i//60000 for i in [9476251, 7888804, 5461012, 4950213]]
+#x = ["chunk_1k\n8_proofs", "chunk_2k\n4_proofs", "chunk_4k\n2_proofs", "chunk_8k\n1_proof"]
+#y = [i//60000 for i in [9476251, 7888804, 5461012, 4950213]]
 plt.bar(x, y, width=0.4)
 plt.show()
