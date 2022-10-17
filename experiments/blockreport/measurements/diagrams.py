@@ -42,7 +42,8 @@ with open(source_file, 'r') as fp:
 #plt.show()
 
 # and something interesting
-#x = ["chunk_1k\n8_proofs", "chunk_2k\n4_proofs", "chunk_4k\n2_proofs", "chunk_8k\n1_proof"]
+x = ["chunk_1k\n8_proofs", "chunk_2k\n4_proofs", "chunk_4k\n2_proofs", "chunk_8k\n1_proof"]
 #y = [i//60000 for i in [9476251, 7888804, 5461012, 4950213]]
-#plt.bar(x, y, width=0.4)
-#plt.show()
+y = [i//1000 for i in [9476251, 7888804, 5461012, 4950213]]
+plt.bar(x, y, width=0.4)
+plt.show()
